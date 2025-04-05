@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "prepare": "husky",
-    "format": "prettier --write --ignore-unknown",
+    "format": "prettier --write .",
     "lint": "eslint ."
   },
   "devDependencies": {
