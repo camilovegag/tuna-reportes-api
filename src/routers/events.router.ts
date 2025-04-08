@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 
-const eventsRoute = new Hono();
+const eventsRouter = new Hono();
 
-eventsRoute.post("/", (c) => {
+eventsRouter.post("/", (c) => {
   return c.json({ id: "some-uuid", message: "created" }, 201);
 });
 
-export default eventsRoute;
+export default eventsRouter;
