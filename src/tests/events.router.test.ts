@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { mockAuth } from "../middleware/mock-auth";
 import app from "../app";
 
 const mockRequest = {
@@ -10,6 +9,34 @@ const mockRequest = {
   is_international: false,
   status: "confirmado",
 };
+
+function testMissingField(
+  field: keyof typeof mockRequest,
+  expectedError: object,
+) {
+  describe(`when the request is missing the ${field} field`, () => {
+    let response: Response;
+    let data: any;
+
+    beforeEach(async () => {
+      const { [field]: _, ...invalidRequest } = mockRequest;
+      response = await app.request("/events", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(invalidRequest),
+      });
+      data = await response.json();
+    });
+
+    it("should respond with 400 Bad Request", () => {
+      expect(response.status).toBe(400);
+    });
+
+    it("should return an error message", () => {
+      expect(data).toEqual({ error: expectedError });
+    });
+  });
+}
 
 describe("POST /events", () => {
   describe("when the request is valid", () => {
@@ -37,29 +64,11 @@ describe("POST /events", () => {
     });
   });
 
-  describe("when the request is missing the name field", () => {
-    let response: Response;
-    let data: any;
-
-    beforeEach(async () => {
-      const invalidRequest = { ...mockRequest, name: "" };
-      response = await app.request("/events", {
-        method: "POST",
-        headers: { "Content-type": "application/json" },
-        body: JSON.stringify(invalidRequest),
-      });
-
-      data = await response.json();
-    });
-
-    it("should respond with 400 Bad Request", () => {
-      expect(response.status).toBe(400);
-    });
-
-    it("should return an error message", () => {
-      expect(data).toEqual({ error: { name: ["name is required"] } });
-    });
-  });
+  testMissingField("name", { name: ["name is required"] });
+  testMissingField("location", { location: ["location is required"] });
+  testMissingField("type", { type: ["type is required"] });
+  testMissingField("date", { date: ["date is required"] });
+  testMissingField("status", { status: ["status is required"] });
 
   // it('should validate missing fields and reject the creation, saying which one is missing', () => {})
   // it('should return 400 if type or status are not part of the allowed enum values', () => {})
