@@ -37,6 +37,30 @@ describe("POST /events", () => {
     });
   });
 
+  describe("when the request is missing the name field", () => {
+    let response: Response;
+    let data: any;
+
+    beforeEach(async () => {
+      const invalidRequest = { ...mockRequest, name: "" };
+      response = await app.request("/events", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(invalidRequest),
+      });
+
+      data = await response.json();
+    });
+
+    it("should respond with 400 Bad Request", () => {
+      expect(response.status).toBe(400);
+    });
+
+    it("should return an error message", () => {
+      expect(data).toEqual({ error: { name: ["name is required"] } });
+    });
+  });
+
   // it('should validate missing fields and reject the creation, saying which one is missing', () => {})
   // it('should return 400 if type or status are not part of the allowed enum values', () => {})
   // it('should validate that the enums for type and status are correct', () => {})
