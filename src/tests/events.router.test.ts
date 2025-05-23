@@ -2,12 +2,13 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import app from "../app";
 
 const mockRequest = {
-  name: "Festival #26 Tuna Sabana",
+  name: "Evento de prueba #1",
+  description: "Este es el primer evento que enviaremos a supabase :)",
   date: "2025-04-07T13:05:00.000Z",
   location: "Universidad de La Sabana",
   type: "festival",
-  is_international: false,
   status: "confirmado",
+  is_international: false,
 };
 
 function testMissingField(
@@ -59,8 +60,10 @@ describe("POST /events", () => {
       expect(response.status).toBe(201);
     });
 
-    it("should return a confirmation message containing the event id", () => {
-      expect(data).toEqual({ id: "some-uuid", message: "created" });
+    it("should return a confirmation message and the event id", () => {
+      expect(data).toHaveProperty("id");
+      expect(typeof data.id).toBe("string");
+      expect(data.message).toBe("Event created");
     });
   });
 
