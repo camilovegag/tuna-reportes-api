@@ -15,6 +15,7 @@ function requiredFieldError(field: string) {
 
 export const eventSchema = z.object({
   name: z.string(requiredFieldError("name")).min(1, "name is required"),
+  description: z.string().optional(),
   location: z
     .string(requiredFieldError("location"))
     .min(1, "location is required"),
@@ -32,4 +33,5 @@ export const eventSchema = z.object({
         error: "invalid event status",
       },
     ),
+  is_international: z.boolean().default(false),
 });
