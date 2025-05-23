@@ -1,12 +1,12 @@
 import { z } from "zod/v4";
 import { Hono } from "hono";
 import { eventSchema } from "../schemas/event.schema";
+import { supabase } from "../lib/supabase";
 
 const eventsRouter = new Hono();
 
 eventsRouter.post("/", async (c) => {
   const body = await c.req.json();
-
   const result = eventSchema.safeParse(body);
 
   if (!result.success) {
@@ -20,7 +20,20 @@ eventsRouter.post("/", async (c) => {
 
     return c.json({ error: flatErrors }, 400);
   }
-  return c.json({ id: "some-uuid", message: "created" }, 201);
+
+  const eventData = result.data;
+
+  const { data, error } = await supabase
+    .from("events")
+    .insert([eventData])
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ id: data.id, message: "Event created" }, 201);
 });
 
 export default eventsRouter;
