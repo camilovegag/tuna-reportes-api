@@ -7,7 +7,11 @@
     "dev": "bun src/index.ts",
     "prepare": "husky",
     "format": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:migrate": "npx drizzle-kit migrate",
+    "db:drop": "npx drizzle-kit drop",
+    "db:generate": "npx drizzle-kit generate",
+    "db:studio": "npx drizzle-kit studio"
   },
   "dependencies": {
     "dotenv": "^16.5.0",
