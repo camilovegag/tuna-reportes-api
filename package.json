@@ -12,6 +12,7 @@
   "dependencies": {
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
+    "drizzle-zod": "^0.8.2",
     "hono": "^4.7.5",
     "postgres": "^3.4.7",
     "zod": "^3.25.20"
