@@ -1,6 +1,6 @@
 -- Current sql file was generated after introspecting the database
 -- If you want to run this migration please uncomment this code before executing migrations
-/*
+
 CREATE TYPE "public"."attendance_status" AS ENUM('asiste', 'no_asiste', 'por_confirmar', 'no_responde');--> statement-breakpoint
 CREATE TYPE "public"."blood_type" AS ENUM('a+', 'a-', 'b+', 'b-', 'ab+', 'ab-', 'o+', 'o-');--> statement-breakpoint
 CREATE TYPE "public"."civil_status" AS ENUM('soltero', 'casado', 'divorciado');--> statement-breakpoint
@@ -77,4 +77,3 @@ ALTER TABLE "attendances" ADD CONSTRAINT "attendances_member_id_fkey" FOREIGN KE
 ALTER TABLE "attendances" ADD CONSTRAINT "attendances_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
-*/
