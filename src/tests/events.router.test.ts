@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import app from "../app";
 
 const mockRequest = {
-  name: "Evento de prueba #1",
-  description: "Este es el primer evento que enviaremos a supabase :)",
+  name: "Test name",
+  description: "Test description",
   date: "2025-04-07T13:05:00.000Z",
   location: "Universidad de La Sabana",
   type: "festival",
