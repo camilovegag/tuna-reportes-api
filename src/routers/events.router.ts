@@ -30,7 +30,7 @@ eventsRouter.post("/", async (c) => {
 
     return c.json({ id: data?.id, message: "Event created" }, 201);
   } catch (error) {
-    return c.json({ errorrrr: error }, 500);
+    return c.json({ error }, 500);
   }
 });
 
