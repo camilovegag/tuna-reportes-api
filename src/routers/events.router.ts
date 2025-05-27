@@ -1,13 +1,14 @@
-import { z } from "zod/v4";
+import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
-import { eventSchema } from "../schemas/event.schema";
-import { supabase } from "../lib/supabase";
+import { z } from "zod/v4";
+import { db, dbSchema } from "../db";
 
 const eventsRouter = new Hono();
 
 eventsRouter.post("/", async (c) => {
   const body = await c.req.json();
-  const result = eventSchema.safeParse(body);
+  const userInsertSchema = createInsertSchema(dbSchema.events);
+  const result = userInsertSchema.safeParse(body);
 
   if (!result.success) {
     const tree = z.treeifyError(result.error);
@@ -21,19 +22,16 @@ eventsRouter.post("/", async (c) => {
     return c.json({ error: flatErrors }, 400);
   }
 
-  const eventData = result.data;
+  try {
+    const [data] = await db
+      .insert(dbSchema.events)
+      .values(result.data)
+      .returning({ id: dbSchema.events.id });
 
-  const { data, error } = await supabase
-    .from("events")
-    .insert([eventData])
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ id: data?.id, message: "Event created" }, 201);
+  } catch (error) {
+    return c.json({ error }, 500);
   }
-
-  return c.json({ id: data.id, message: "Event created" }, 201);
 });
 
 export default eventsRouter;
