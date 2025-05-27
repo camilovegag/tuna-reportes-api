@@ -1,14 +1,13 @@
-import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { z } from "zod/v4";
 import { db, dbSchema } from "../db";
+import { eventInsertSchema } from "../schemas/events.schema";
 
 const eventsRouter = new Hono();
 
 eventsRouter.post("/", async (c) => {
   const body = await c.req.json();
-  const userInsertSchema = createInsertSchema(dbSchema.events);
-  const result = userInsertSchema.safeParse(body);
+  const result = eventInsertSchema.safeParse(body);
 
   if (!result.success) {
     const tree = z.treeifyError(result.error);
