@@ -4,7 +4,7 @@
   "type": "module",
   "module": "index.ts",
   "scripts": {
-    "dev": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
     "prepare": "husky",
     "format": "prettier --write .",
     "lint": "eslint .",
