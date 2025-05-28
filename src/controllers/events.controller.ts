@@ -3,6 +3,15 @@ import { z } from "zod/v4";
 import { db, dbSchema } from "../db";
 import { eventInsertSchema } from "../schemas/events.schema";
 
+export async function getEventsController(c: Context) {
+  try {
+    const events = await db.select().from(dbSchema.events);
+    return c.json({ events, count: events.length }, 200);
+  } catch (error) {
+    return c.json({ error }, 500);
+  }
+}
+
 export async function createEventController(c: Context) {
   const body = await c.req.json();
   const result = eventInsertSchema.safeParse(body);

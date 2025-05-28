@@ -1,15 +1,17 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import app from "../app";
+import { db, dbSchema } from "../db";
 
 const mockRequest = {
-  name: "Test name",
-  description: "Test description",
-  date: "2025-04-07T13:05:00.000Z",
+  name: "Festival 26 años",
+  date: "2025-05-28T13:05:00.000Z",
   location: "Universidad de La Sabana",
   type: "festival",
-  status: "confirmado",
-  is_international: false,
 };
+
+beforeEach(async () => {
+  await db.delete(dbSchema.events);
+});
 
 function testMissingField(
   field: keyof typeof mockRequest,
@@ -96,4 +98,37 @@ describe("POST /events", () => {
 
   // it('should only allow one event with the same name and date (no duplicates)', () => {})
   // it('should handle the is_international boolean, it will be false by default if not sent', () => {})
+});
+
+describe("GET /events", () => {
+  describe("when there are no events", () => {});
+  describe("when the request is successfull", () => {
+    let response: Response;
+    let data: any;
+
+    beforeEach(async () => {
+      await app.request("/events", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(mockRequest),
+      });
+
+      response = await app.request("/events");
+      data = await response.json();
+    });
+
+    it("should respond with a 200 OK", () => {
+      expect(response.status).toBe(200);
+    });
+
+    it("should match the response", () => {
+      expect(data.events).toBeArray();
+      expect(data.count).toBe(1);
+
+      const event = data.events.at(0);
+      expect(event).toHaveProperty("id");
+      expect(event.status).toBe("por_confirmar");
+      expect(event.isInternational).toBeFalse();
+    });
+  });
 });
