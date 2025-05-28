@@ -1,14 +1,25 @@
 import type { Context } from "hono";
 import { z } from "zod/v4";
+import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import { eventInsertSchema } from "../schemas/events.schema";
+import type { ErrorResponse } from "../types/error";
+import type { EventPostResponse, EventsGetResponse } from "../types/event";
 
 export async function getEventsController(c: Context) {
   try {
     const events = await db.select().from(dbSchema.events);
-    return c.json({ events, count: events.length }, 200);
+    const response: EventsGetResponse = { events, count: events.length };
+    return c.json(response, 200);
   } catch (error) {
-    return c.json({ error }, 500);
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
+      },
+    };
+    return c.json(errorResponse, 500);
   }
 }
 
@@ -24,7 +35,15 @@ export async function createEventController(c: Context) {
         value.errors,
       ]),
     );
-    return c.json({ error: flatErrors }, 400);
+
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Validation failed",
+        details: flatErrors,
+        code: ERROR_CODES.VALIDATION,
+      },
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
@@ -33,8 +52,19 @@ export async function createEventController(c: Context) {
       .values(result.data)
       .returning({ id: dbSchema.events.id });
 
-    return c.json({ id: data?.id, message: "Event created" }, 201);
+    const response: EventPostResponse = {
+      id: data?.id,
+      message: "Event created",
+    };
+    return c.json(response, 201);
   } catch (error) {
-    return c.json({ error }, 500);
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
+      },
+    };
+    return c.json(errorResponse, 500);
   }
 }

@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
+import type {
+  Event,
+  EventPostResponse,
+  EventsGetResponse,
+} from "../types/event";
+import type { ErrorResponse } from "../types/error";
+import { ERROR_CODES } from "../constants/error-codes";
 
 const mockRequest = {
   name: "Festival 26 años",
@@ -15,11 +22,11 @@ beforeEach(async () => {
 
 function testMissingField(
   field: keyof typeof mockRequest,
-  expectedError: object,
+  expectedError: Record<string, string[]>,
 ) {
   describe(`when the request is missing the ${field} field`, () => {
     let response: Response;
-    let data: any;
+    let data: ErrorResponse;
 
     beforeEach(async () => {
       const { [field]: _, ...invalidRequest } = mockRequest;
@@ -28,7 +35,7 @@ function testMissingField(
         headers: { "Content-type": "application/json" },
         body: JSON.stringify(invalidRequest),
       });
-      data = await response.json();
+      data = (await response.json()) as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -36,7 +43,13 @@ function testMissingField(
     });
 
     it("should return an error message", () => {
-      expect(data).toEqual({ error: expectedError });
+      expect(data).toEqual({
+        error: {
+          message: "Validation failed",
+          details: expectedError,
+          code: ERROR_CODES.VALIDATION,
+        },
+      });
     });
   });
 }
@@ -44,7 +57,7 @@ function testMissingField(
 describe("POST /events", () => {
   describe("when the request is valid", () => {
     let response: Response;
-    let data: any;
+    let data: EventPostResponse;
 
     beforeEach(async () => {
       response = await app.request("/events", {
@@ -55,7 +68,7 @@ describe("POST /events", () => {
         body: JSON.stringify(mockRequest),
       });
 
-      data = await response.json();
+      data = (await response.json()) as EventPostResponse;
     });
 
     it("should respond with 201 Created", () => {
@@ -101,10 +114,21 @@ describe("POST /events", () => {
 });
 
 describe("GET /events", () => {
-  describe("when there are no events", () => {});
-  describe("when the request is successfull", () => {
+  describe("when there are no events", () => {
+    it("should return 200 OK and an empty events array", async () => {
+      const response = await app.request("/events");
+      const data = (await response.json()) as EventsGetResponse;
+      expect(response.status).toBe(200);
+      expect(data.events).toBeArray();
+      expect(data.events).toBeEmpty();
+      expect(data.count).toBe(0);
+    });
+  });
+
+  describe("when there is at least one event", () => {
     let response: Response;
-    let data: any;
+    let data: EventsGetResponse;
+    let event: Event;
 
     beforeEach(async () => {
       await app.request("/events", {
@@ -114,19 +138,21 @@ describe("GET /events", () => {
       });
 
       response = await app.request("/events");
-      data = await response.json();
+      data = (await response.json()) as EventsGetResponse;
+      event = data.events.at(0)!;
     });
 
     it("should respond with a 200 OK", () => {
       expect(response.status).toBe(200);
     });
 
-    it("should match the response", () => {
+    it("should return the created event with correct fields and values", () => {
       expect(data.events).toBeArray();
       expect(data.count).toBe(1);
+      expect(event.name).toBe(mockRequest.name);
+    });
 
-      const event = data.events.at(0);
-      expect(event).toHaveProperty("id");
+    it("should set status to 'por_confirmar' and isInternational to false by default", () => {
       expect(event.status).toBe("por_confirmar");
       expect(event.isInternational).toBeFalse();
     });

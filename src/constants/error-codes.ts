@@ -1,0 +1,4 @@
+export const ERROR_CODES = {
+  VALIDATION: "VALIDATION_ERROR",
+  INTERNAL: "INTERNAL_ERROR",
+} as const;
