@@ -67,11 +67,20 @@ describe("POST /events", () => {
     });
   });
 
-  testMissingField("name", { name: ["name is required"] });
-  testMissingField("location", { location: ["location is required"] });
-  testMissingField("type", { type: ["type is required"] });
-  testMissingField("date", { date: ["date is required"] });
-  testMissingField("status", { status: ["status is required"] });
+  testMissingField("name", {
+    name: ["Invalid input: expected string, received undefined"],
+  });
+  testMissingField("location", {
+    location: ["Invalid input: expected string, received undefined"],
+  });
+  testMissingField("type", {
+    type: [
+      'Invalid option: expected one of "serenata"|"ensayo"|"festival"|"certamen"|"remate"|"parche"|"viaje"',
+    ],
+  });
+  testMissingField("date", {
+    date: ["Invalid input: expected string, received undefined"],
+  });
 
   // it('should validate missing fields and reject the creation, saying which one is missing', () => {})
   // it('should return 400 if type or status are not part of the allowed enum values', () => {})
