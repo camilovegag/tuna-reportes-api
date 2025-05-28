@@ -70,6 +70,9 @@ describe("POST /events", () => {
   testMissingField("name", {
     name: ["Invalid input: expected string, received undefined"],
   });
+  testMissingField("date", {
+    date: ["Invalid input: expected string, received undefined"],
+  });
   testMissingField("location", {
     location: ["Invalid input: expected string, received undefined"],
   });
@@ -77,9 +80,6 @@ describe("POST /events", () => {
     type: [
       'Invalid option: expected one of "serenata"|"ensayo"|"festival"|"certamen"|"remate"|"parche"|"viaje"',
     ],
-  });
-  testMissingField("date", {
-    date: ["Invalid input: expected string, received undefined"],
   });
 
   // it('should validate missing fields and reject the creation, saying which one is missing', () => {})
