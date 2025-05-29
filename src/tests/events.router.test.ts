@@ -113,6 +113,26 @@ describe("POST /events", () => {
   // it('should handle the is_international boolean, it will be false by default if not sent', () => {})
 });
 
+describe("GET /events/:id", () => {
+  let createdEvent: Event;
+
+  beforeEach(async () => {
+    const postResponse = await app.request("/events", {
+      method: "POST",
+      headers: { "Content-type": "application/json" },
+      body: JSON.stringify(mockRequest),
+    });
+    const postData = (await postResponse.json()) as EventPostResponse;
+    const getResponse = await app.request("/events");
+    const getData = (await getResponse.json()) as EventsGetResponse;
+    const foundEvent = getData.events.find((event) => event.id === postData.id);
+    if (!foundEvent) {
+      throw new Error("Created event not found in events list");
+    }
+    createdEvent = foundEvent;
+  });
+});
+
 describe("GET /events", () => {
   describe("when there are no events", () => {
     it("should return 200 OK and an empty events array", async () => {
