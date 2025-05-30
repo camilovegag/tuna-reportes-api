@@ -97,20 +97,17 @@ describe("POST /events", () => {
     ],
   });
 
-  // it('should validate missing fields and reject the creation, saying which one is missing', () => {})
-  // it('should return 400 if type or status are not part of the allowed enum values', () => {})
-  // it('should validate that the enums for type and status are correct', () => {})
-  // it('should validate that date is not in the past', () => {})
-  // it('should validate the minimum lengths for name and location', () => {})
-  // it('should return 400 if name or location are only spaces or empty strings', () => {})
-
-  // it('should create events only if the user is authenticated', () => {})
-  // it('should create events only if the user has an editor or admin role', () => {})
-  // it('should ignore tampering with created_at, created_by, updated_at or updated_by as these are set by the DB', () => {})
-  // it('should not allow setting the id manually in the request body', () => {})
-
-  // it('should only allow one event with the same name and date (no duplicates)', () => {})
-  // it('should handle the is_international boolean, it will be false by default if not sent', () => {})
+  it.todo("should validate that date is not in the past");
+  it.todo("should validate the minimum lengths for name and location");
+  it.todo("should create events only if the user is authenticated");
+  it.todo("should create events only if the user has an editor or admin role");
+  it.todo("should not allow setting the id manually in the request body");
+  it.todo(
+    "should ignore tampering with created_at, created_by, updated_at or updated_by as these are set by the DB",
+  );
+  it.todo(
+    "should only allow one event with the same name and date (no duplicates)",
+  );
 });
 
 describe("GET /events", () => {
@@ -204,7 +201,7 @@ describe("GET /events/:id", () => {
     });
   });
   describe("when the event does not exist", () => {
-    it("should respont with 404 Not Found", async () => {
+    it("should respond with 404 Not Found", async () => {
       const response = await app.request(
         "/events/38bd666b-cf64-41d8-8d79-ffffffffffff",
       );
@@ -259,24 +256,24 @@ describe("PATCH /events/:id", () => {
     });
   });
 
-  describe("when the event does not exist", () => {
+  describe.todo("when the event does not exist", () => {
     // it("should respond with 404 Not Found and an error message");
   });
 
-  describe("when the id is not a valid uuid", () => {
+  describe.todo("when the id is not a valid uuid", () => {
     // it("should respond with 400 Bad Request and a validation error");
   });
 
-  describe("when the request body is invalid", () => {
+  describe.todo("when the request body is invalid", () => {
     // it("should respond with 400 Bad Request and a validation error");
     // it("should not update any field if validation fails");
   });
 
-  describe("when trying to update protected fields", () => {
+  describe.todo("when trying to update protected fields", () => {
     // it("should ignore or reject updates to protected fields");
   });
 
-  describe("when no updatable fields are provided", () => {
+  describe.todo("when no updatable fields are provided", () => {
     // it("should respond with 400 Bad Request and an error message");
   });
 });

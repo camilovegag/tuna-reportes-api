@@ -163,7 +163,7 @@ export async function updateEventController(c: Context) {
     const [updatedEvent] = await db
       .update(dbSchema.events)
       .set(updateData)
-      .where(eq(dbSchema.events.id, id))
+      .where(eq(dbSchema.events.id, idResult.data))
       .returning();
 
     if (!updatedEvent) {
