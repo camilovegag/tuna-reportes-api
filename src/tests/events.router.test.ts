@@ -215,3 +215,68 @@ describe("GET /events/:id", () => {
     });
   });
 });
+
+describe("PATCH /events/:id", () => {
+  describe("when the event exists and the request is valid", () => {
+    let createdEvent: Event;
+    let patchResponse: Response;
+    let patchData: Event;
+
+    beforeEach(async () => {
+      const postResponse = await app.request("/events", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(mockRequest),
+      });
+      const postData = (await postResponse.json()) as EventPostResponse;
+
+      const getByIdResponse = await app.request(`/events/${postData.id}`);
+      const getByIdData = (await getByIdResponse.json()) as Event;
+
+      createdEvent = getByIdData;
+
+      patchResponse = await app.request(`/events/${postData.id}`, {
+        method: "PATCH",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Certamen 26 años",
+          date: "2025-09-20T13:00:00.000Z",
+        }),
+      });
+
+      patchData = (await patchResponse.json()) as Event;
+    });
+
+    it("should respond with 200 OK", () => {
+      expect(patchResponse.status).toBe(200);
+    });
+
+    it("should update the event with the provided fields", () => {
+      expect(patchData.name).toBe("Certamen 26 años");
+      expect(new Date(patchData.date).toISOString()).toBe(
+        "2025-09-20T13:00:00.000Z",
+      );
+    });
+  });
+
+  describe("when the event does not exist", () => {
+    // it("should respond with 404 Not Found and an error message");
+  });
+
+  describe("when the id is not a valid uuid", () => {
+    // it("should respond with 400 Bad Request and a validation error");
+  });
+
+  describe("when the request body is invalid", () => {
+    // it("should respond with 400 Bad Request and a validation error");
+    // it("should not update any field if validation fails");
+  });
+
+  describe("when trying to update protected fields", () => {
+    // it("should ignore or reject updates to protected fields");
+  });
+
+  describe("when no updatable fields are provided", () => {
+    // it("should respond with 400 Bad Request and an error message");
+  });
+});

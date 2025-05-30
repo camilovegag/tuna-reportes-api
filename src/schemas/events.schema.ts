@@ -1,4 +1,8 @@
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-zod";
 import { dbSchema } from "../db";
 
 export const eventInsertSchema = createInsertSchema(dbSchema.events, {
@@ -8,3 +12,13 @@ export const eventInsertSchema = createInsertSchema(dbSchema.events, {
 });
 
 export const eventSelectSchema = createSelectSchema(dbSchema.events);
+
+export const eventUpdateSchema = createUpdateSchema(dbSchema.events)
+  .omit({
+    id: true,
+    createdAt: true,
+    createdBy: true,
+    updatedAt: true,
+    updatedBy: true,
+  })
+  .strict();

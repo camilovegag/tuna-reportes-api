@@ -3,7 +3,11 @@ import type { Context } from "hono";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
-import { eventInsertSchema, eventSelectSchema } from "../schemas/events.schema";
+import {
+  eventInsertSchema,
+  eventSelectSchema,
+  eventUpdateSchema,
+} from "../schemas/events.schema";
 import type { ErrorResponse } from "../types/error";
 import type { EventPostResponse, EventsGetResponse } from "../types/event";
 
@@ -56,8 +60,6 @@ export async function getEventController(c: Context) {
 
     return c.json(event, 200);
   } catch (error) {
-    console.log("inside catch", error);
-
     const errorResponse: ErrorResponse = {
       error: {
         message:
@@ -103,6 +105,62 @@ export async function createEventController(c: Context) {
       message: "Event created",
     };
     return c.json(response, 201);
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
+      },
+    };
+    return c.json(errorResponse, 500);
+  }
+}
+
+export async function updateEventController(c: Context) {
+  const id = await c.req.param("id");
+  const idResult = eventSelectSchema.shape.id.safeParse(id);
+  const body = await c.req.json();
+  const result = eventUpdateSchema.safeParse(body);
+
+  if (!idResult.success) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid event id format",
+        code: ERROR_CODES.VALIDATION,
+      },
+    };
+    return c.json(errorResponse, 400);
+  }
+
+  if (!result.success) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Validation error",
+        code: ERROR_CODES.VALIDATION,
+      },
+    };
+    return c.json(errorResponse, 400);
+  }
+
+  try {
+    const [updatedEvent] = await db
+      .update(dbSchema.events)
+      .set(result.data)
+      .where(eq(dbSchema.events.id, id))
+      .returning();
+
+    if (!updatedEvent) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Event not found",
+          code: ERROR_CODES.NOT_FOUND,
+        },
+      };
+      return c.json(errorResponse, 404);
+    }
+
+    return c.json(updatedEvent, 200);
   } catch (error) {
     const errorResponse: ErrorResponse = {
       error: {
