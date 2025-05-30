@@ -118,7 +118,7 @@ export async function createEventController(c: Context) {
 }
 
 export async function updateEventController(c: Context) {
-  const id = await c.req.param("id");
+  const id = c.req.param("id");
   const idResult = eventSelectSchema.shape.id.safeParse(id);
   const body = await c.req.json();
   const result = eventUpdateSchema.safeParse(body);
