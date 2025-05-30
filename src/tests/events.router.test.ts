@@ -215,7 +215,6 @@ describe("GET /events/:id", () => {
 
 describe("PATCH /events/:id", () => {
   describe("when the event exists and the request is valid", () => {
-    let createdEvent: Event;
     let patchResponse: Response;
     let patchData: Event;
 
@@ -226,11 +225,6 @@ describe("PATCH /events/:id", () => {
         body: JSON.stringify(mockRequest),
       });
       const postData = (await postResponse.json()) as EventPostResponse;
-
-      const getByIdResponse = await app.request(`/events/${postData.id}`);
-      const getByIdData = (await getByIdResponse.json()) as Event;
-
-      createdEvent = getByIdData;
 
       patchResponse = await app.request(`/events/${postData.id}`, {
         method: "PATCH",
