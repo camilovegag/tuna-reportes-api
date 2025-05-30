@@ -1,4 +1,5 @@
 export const ERROR_CODES = {
   VALIDATION: "VALIDATION_ERROR",
   INTERNAL: "INTERNAL_ERROR",
+  NOT_FOUND: "NOT_FOUND",
 } as const;

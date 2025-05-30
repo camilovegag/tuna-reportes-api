@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import app from "../app";
+import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
+import type { ErrorResponse } from "../types/error";
 import type {
   Event,
   EventPostResponse,
   EventsGetResponse,
 } from "../types/event";
-import type { ErrorResponse } from "../types/error";
-import { ERROR_CODES } from "../constants/error-codes";
 
 const mockRequest = {
   name: "Festival 26 años",
@@ -113,26 +113,6 @@ describe("POST /events", () => {
   // it('should handle the is_international boolean, it will be false by default if not sent', () => {})
 });
 
-describe("GET /events/:id", () => {
-  let createdEvent: Event;
-
-  beforeEach(async () => {
-    const postResponse = await app.request("/events", {
-      method: "POST",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify(mockRequest),
-    });
-    const postData = (await postResponse.json()) as EventPostResponse;
-    const getResponse = await app.request("/events");
-    const getData = (await getResponse.json()) as EventsGetResponse;
-    const foundEvent = getData.events.find((event) => event.id === postData.id);
-    if (!foundEvent) {
-      throw new Error("Created event not found in events list");
-    }
-    createdEvent = foundEvent;
-  });
-});
-
 describe("GET /events", () => {
   describe("when there are no events", () => {
     it("should return 200 OK and an empty events array", async () => {
@@ -175,6 +155,63 @@ describe("GET /events", () => {
     it("should set status to 'por_confirmar' and isInternational to false by default", () => {
       expect(event.status).toBe("por_confirmar");
       expect(event.isInternational).toBeFalse();
+    });
+  });
+});
+
+describe("GET /events/:id", () => {
+  describe("when the event exists", () => {
+    let createdEvent: Event;
+    let response: Response;
+    let event: Event;
+    beforeEach(async () => {
+      const postResponse = await app.request("/events", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(mockRequest),
+      });
+      const postData = (await postResponse.json()) as EventPostResponse;
+      const getResponse = await app.request("/events");
+      const getData = (await getResponse.json()) as EventsGetResponse;
+      const foundEvent = getData.events.find(
+        (event) => event.id === postData.id,
+      );
+
+      if (!foundEvent) {
+        throw new Error("Created event not found in events list");
+      }
+      createdEvent = foundEvent;
+
+      response = await app.request(`/events/${createdEvent.id}`);
+      event = (await response.json()) as Event;
+    });
+
+    it("should respond with 200 OK", () => {
+      expect(response.status).toBe(200);
+    });
+
+    it("should return the expected object", () => {
+      expect(event.id).toBe(createdEvent.id);
+    });
+  });
+  describe("when the id is not an uuid", () => {
+    it("should respond with 400 Bad Request", async () => {
+      const response = await app.request("/events/bad-formated-id");
+      expect(response.status).toBe(400);
+
+      const data = (await response.json()) as ErrorResponse;
+      expect(data.error.message).toBe("Invalid event id format");
+    });
+  });
+  describe("when the event does not exist", () => {
+    it("should respont with 404 Not Found", async () => {
+      const response = await app.request(
+        "/events/38bd666b-cf64-41d8-8d79-ffffffffffff",
+      );
+      expect(response.status).toBe(404);
+
+      const data = (await response.json()) as ErrorResponse;
+      expect(data.error.message).toBe("Event not found");
     });
   });
 });

@@ -1,4 +1,4 @@
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { dbSchema } from "../db";
 
 export const eventInsertSchema = createInsertSchema(dbSchema.events, {
@@ -6,3 +6,5 @@ export const eventInsertSchema = createInsertSchema(dbSchema.events, {
   date: (schema) => schema.nonempty("Date cannot be empty."),
   location: (schema) => schema.nonempty("Location cannot be empty."),
 });
+
+export const eventSelectSchema = createSelectSchema(dbSchema.events);
