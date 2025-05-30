@@ -143,10 +143,26 @@ export async function updateEventController(c: Context) {
     return c.json(errorResponse, 400);
   }
 
+  if (Object.keys(result.data).length === 0) {
+    return c.json(
+      {
+        error: {
+          message: "No fields provided to update",
+          code: ERROR_CODES.VALIDATION,
+        },
+      },
+      400,
+    );
+  }
+
   try {
+    const updateData = {
+      ...result.data,
+      updatedAt: new Date().toISOString(),
+    };
     const [updatedEvent] = await db
       .update(dbSchema.events)
-      .set(result.data)
+      .set(updateData)
       .where(eq(dbSchema.events.id, id))
       .returning();
 
