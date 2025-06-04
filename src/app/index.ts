@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import pingRoute from "../routes/ping.route";
+import pingRouter from "../routers/ping.router";
+import eventsRouter from "../routers/events.router";
 
 const app = new Hono();
 
-app.route("/", pingRoute);
+app.route("/ping", pingRouter);
+app.route("/events", eventsRouter);
 
 export default app;

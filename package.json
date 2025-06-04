@@ -4,13 +4,22 @@
   "type": "module",
   "module": "index.ts",
   "scripts": {
-    "dev": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
     "prepare": "husky",
     "format": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:migrate": "npx drizzle-kit migrate",
+    "db:drop": "npx drizzle-kit drop",
+    "db:generate": "npx drizzle-kit generate",
+    "db:studio": "npx drizzle-kit studio"
   },
   "dependencies": {
-    "hono": "^4.7.5"
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.43.1",
+    "drizzle-zod": "^0.8.2",
+    "hono": "^4.7.5",
+    "postgres": "^3.4.7",
+    "zod": "^3.25.20"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -18,11 +27,13 @@
   "devDependencies": {
     "@eslint/js": "^9.24.0",
     "@types/bun": "latest",
+    "drizzle-kit": "^0.31.1",
     "eslint": "^9.24.0",
     "eslint-config-prettier": "^10.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
-    "prettier": "3.5.3"
+    "prettier": "3.5.3",
+    "tsx": "^4.19.4"
   },
   "lint-staged": {
     "**/*": [
