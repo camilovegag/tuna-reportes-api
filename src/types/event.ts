@@ -9,6 +9,6 @@ export type EventsGetResponse = {
 };
 
 export type EventPostResponse = {
-  id: string | undefined;
+  id: string;
   message: string;
 };

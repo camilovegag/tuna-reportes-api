@@ -95,13 +95,23 @@ export async function createEventController(c: Context) {
   }
 
   try {
-    const [data] = await db
+    const [inserted] = await db
       .insert(dbSchema.events)
       .values(result.data)
       .returning({ id: dbSchema.events.id });
 
+    if (!inserted || !inserted.id) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Failed to create event",
+          code: ERROR_CODES.INTERNAL,
+        },
+      };
+      return c.json(errorResponse, 500);
+    }
+
     const response: EventPostResponse = {
-      id: data?.id,
+      id: inserted.id,
       message: "Event created",
     };
     return c.json(response, 201);
