@@ -69,12 +69,20 @@ export const eventType = pgEnum("event_type", [
 ]);
 export const memberRank = pgEnum("member_rank", ["aspirante", "bulto", "tuno"]);
 export const userRole = pgEnum("user_role", ["admin", "editor", "viewer"]);
+export const authProvider = pgEnum("auth_provider", [
+  "local",
+  "google",
+  "clerk",
+]);
 
 export const users = pgTable(
   "users",
   {
     id: uuid().defaultRandom().primaryKey().notNull(),
-    clerkUserId: text("clerk_user_id"),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    provider: authProvider().default("local"),
+    providerId: text("provider_id"),
     memberId: uuid("member_id"),
     role: userRole().default("viewer").notNull(),
     lastLoginAt: timestamp("last_login_at", {
