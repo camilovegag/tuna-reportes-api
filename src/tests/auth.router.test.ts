@@ -149,12 +149,25 @@ describe("POST /auth/register", () => {
       body: JSON.stringify(mockRequest),
     });
 
+    await db.insert(dbSchema.members).values({
+      id: "b1111111-2222-1111-1111-111111111111",
+      raul: 2,
+      rank: "tuno",
+      birthDate: "2000-01-01",
+      nickname: "testnick2",
+      fullName: "Test User 2",
+      vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
+    });
+
     const response = await app.request("/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(mockRequest),
+      body: JSON.stringify({
+        ...mockRequest,
+        vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
+      }),
     });
     const data = (await response.json()) as ErrorResponse;
 
