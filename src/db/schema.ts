@@ -99,6 +99,7 @@ export const users = pgTable(
     }).defaultNow(),
   },
   (table) => [
+    unique("users_member_id_unique").on(table.memberId),
     foreignKey({
       columns: [table.memberId],
       foreignColumns: [members.id],
