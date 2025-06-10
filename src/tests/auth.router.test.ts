@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
 import type { RegisterInput } from "../schemas/auth.schema";
@@ -12,12 +12,7 @@ const mockRequest: RegisterInput = {
 };
 
 beforeEach(async () => {
-  await db.delete(dbSchema.users);
-  await db.delete(dbSchema.members);
-
   await db.insert(dbSchema.members).values({
-    id: "a1111111-1111-1111-1111-111111111111",
-    raul: 1,
     rank: "tuno",
     birthDate: "2000-01-01",
     nickname: "testnick",
@@ -26,11 +21,15 @@ beforeEach(async () => {
   });
 });
 
+afterEach(async () => {
+  await db.delete(dbSchema.users);
+  await db.delete(dbSchema.members);
+});
+
 describe("POST /auth/register", () => {
   describe("when request is valid", () => {
     let response: Response;
     let data: AuthRegisterPostResponse;
-
     beforeEach(async () => {
       response = await app.request("/auth/register", {
         method: "POST",
@@ -41,15 +40,16 @@ describe("POST /auth/register", () => {
       });
       data = (await response.json()) as AuthRegisterPostResponse;
     });
+
     it("should respond with 201 Created", () => {
       expect(response.status).toBe(201);
     });
+
     it("should return a confirmation message and the user id", () => {
       expect(data).toHaveProperty("id");
       expect(data.message).toBe("User created");
     });
   });
-
   describe("when email is invalid", async () => {
     const badRequest = { ...mockRequest, email: "invalid-email" };
     const response = await app.request("/auth/register", {
@@ -59,6 +59,7 @@ describe("POST /auth/register", () => {
       },
       body: JSON.stringify(badRequest),
     });
+
     const data = (await response.json()) as ErrorResponse;
 
     it("should respond with 400 Bad Request", () => {
@@ -70,7 +71,6 @@ describe("POST /auth/register", () => {
       expect(data.error.details?.email).toContain("Invalid email address");
     });
   });
-
   describe("when password does not meet the criteria", async () => {
     const badRequest = { ...mockRequest, password: "1234" };
     const response = await app.request("/auth/register", {
@@ -80,6 +80,7 @@ describe("POST /auth/register", () => {
       },
       body: JSON.stringify(badRequest),
     });
+
     const data = (await response.json()) as ErrorResponse;
 
     it("should respond with 400 Bad Request", () => {
@@ -93,7 +94,6 @@ describe("POST /auth/register", () => {
       );
     });
   });
-
   describe("when vinculation code is invalid", async () => {
     const badRequest = {
       ...mockRequest,
@@ -106,6 +106,7 @@ describe("POST /auth/register", () => {
       },
       body: JSON.stringify(badRequest),
     });
+
     const data = (await response.json()) as ErrorResponse;
 
     it("should respond with 400 Bad Request", () => {
@@ -116,7 +117,6 @@ describe("POST /auth/register", () => {
       expect(data.error.message).toBe("Validation failed");
     });
   });
-
   describe("when vinculation code does not exists", async () => {
     const badRequest = {
       ...mockRequest,
@@ -129,6 +129,7 @@ describe("POST /auth/register", () => {
       },
       body: JSON.stringify(badRequest),
     });
+
     const data = (await response.json()) as ErrorResponse;
 
     it("should respond with 400 Bad Request", () => {
@@ -139,37 +140,40 @@ describe("POST /auth/register", () => {
       expect(data.error.message).toBe("Vinculation code does not exists");
     });
   });
-
   describe("when the email is already registered", async () => {
-    await app.request("/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(mockRequest),
-    });
+    let response: Response;
+    let data: ErrorResponse;
 
-    await db.insert(dbSchema.members).values({
-      id: "b1111111-2222-1111-1111-111111111111",
-      raul: 2,
-      rank: "tuno",
-      birthDate: "2000-01-01",
-      nickname: "testnick2",
-      fullName: "Test User 2",
-      vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
-    });
-
-    const response = await app.request("/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...mockRequest,
+    beforeEach(async () => {
+      await db.insert(dbSchema.members).values({
+        rank: "tuno",
+        birthDate: "2000-01-01",
+        nickname: "testnick2",
+        fullName: "Test User 2",
         vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
-      }),
+      });
+
+      await app.request("/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(mockRequest),
+      });
+
+      response = await app.request("/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...mockRequest,
+          vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
+        }),
+      });
+
+      data = (await response.json()) as ErrorResponse;
     });
-    const data = (await response.json()) as ErrorResponse;
 
     it("should respond with 400 Bad Request", () => {
       expect(response.status).toBe(400);
