@@ -80,7 +80,7 @@ export const users = pgTable(
   {
     id: uuid().defaultRandom().primaryKey().notNull(),
     email: varchar("email", { length: 255 }).notNull().unique(),
-    passwordHash: text("password_hash").notNull(),
+    passwordHash: text("password_hash"),
     provider: authProvider().default("local"),
     providerId: text("provider_id"),
     memberId: uuid("member_id"),

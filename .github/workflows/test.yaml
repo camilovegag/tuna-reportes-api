@@ -38,9 +38,6 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Generate migrations
-        run: bun run db:generate
-
       - name: Run migrations
         run: bun run db:migrate
 
