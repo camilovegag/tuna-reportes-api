@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import app from "../app";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
+import type { AuthLoginPostResponse } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
 import type {
   Event,
@@ -16,8 +17,51 @@ const mockRequest = {
   type: "festival",
 };
 
+const vinculationCode = "5121caa3-3682-4381-8b97-2ccba11af93c";
+const mockUser = {
+  email: "user@email.com",
+  password: "password",
+};
+
+let token: string;
+
 beforeEach(async () => {
+  await db.insert(dbSchema.members).values({
+    rank: "tuno",
+    birthDate: "2000-01-01",
+    nickname: "testnick",
+    fullName: "Test User",
+    vinculationCode,
+  });
+
+  await app.request("/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ...mockUser,
+      vinculationCode,
+    }),
+  });
+
+  const loginResponse = await app.request("/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(mockUser),
+  });
+
+  const loginData = (await loginResponse.json()) as AuthLoginPostResponse;
+  token = loginData.token;
+});
+
+afterEach(async () => {
   await db.delete(dbSchema.events);
+  await db.delete(dbSchema.users);
+  await db.delete(dbSchema.members);
 });
 
 function testMissingField(
@@ -32,7 +76,10 @@ function testMissingField(
       const { [field]: _, ...invalidRequest } = mockRequest;
       response = await app.request("/events", {
         method: "POST",
-        headers: { "Content-type": "application/json" },
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(invalidRequest),
       });
       data = (await response.json()) as ErrorResponse;
@@ -64,6 +111,7 @@ describe("POST /events", () => {
         method: "POST",
         headers: {
           "Content-type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(mockRequest),
       });
@@ -113,7 +161,11 @@ describe("POST /events", () => {
 describe("GET /events", () => {
   describe("when there are no events", () => {
     it("should return 200 OK and an empty events array", async () => {
-      const response = await app.request("/events");
+      const response = await app.request("/events", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = (await response.json()) as EventsGetResponse;
       expect(response.status).toBe(200);
       expect(data.events).toBeArray();
@@ -130,11 +182,18 @@ describe("GET /events", () => {
     beforeEach(async () => {
       await app.request("/events", {
         method: "POST",
-        headers: { "Content-type": "application/json" },
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(mockRequest),
       });
 
-      response = await app.request("/events");
+      response = await app.request("/events", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       data = (await response.json()) as EventsGetResponse;
       event = data.events.at(0)!;
     });
@@ -164,11 +223,18 @@ describe("GET /events/:id", () => {
     beforeEach(async () => {
       const postResponse = await app.request("/events", {
         method: "POST",
-        headers: { "Content-type": "application/json" },
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(mockRequest),
       });
       const postData = (await postResponse.json()) as EventPostResponse;
-      const getResponse = await app.request("/events");
+      const getResponse = await app.request("/events", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const getData = (await getResponse.json()) as EventsGetResponse;
       const foundEvent = getData.events.find(
         (event) => event.id === postData.id,
@@ -179,7 +245,11 @@ describe("GET /events/:id", () => {
       }
       createdEvent = foundEvent;
 
-      response = await app.request(`/events/${createdEvent.id}`);
+      response = await app.request(`/events/${createdEvent.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       event = (await response.json()) as Event;
     });
 
@@ -193,7 +263,11 @@ describe("GET /events/:id", () => {
   });
   describe("when the id is not an uuid", () => {
     it("should respond with 400 Bad Request", async () => {
-      const response = await app.request("/events/bad-formated-id");
+      const response = await app.request("/events/bad-formated-id", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       expect(response.status).toBe(400);
 
       const data = (await response.json()) as ErrorResponse;
@@ -204,6 +278,11 @@ describe("GET /events/:id", () => {
     it("should respond with 404 Not Found", async () => {
       const response = await app.request(
         "/events/38bd666b-cf64-41d8-8d79-ffffffffffff",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
       expect(response.status).toBe(404);
 
@@ -221,14 +300,20 @@ describe("PATCH /events/:id", () => {
     beforeEach(async () => {
       const postResponse = await app.request("/events", {
         method: "POST",
-        headers: { "Content-type": "application/json" },
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(mockRequest),
       });
       const postData = (await postResponse.json()) as EventPostResponse;
 
       patchResponse = await app.request(`/events/${postData.id}`, {
         method: "PATCH",
-        headers: { "Content-type": "application/json" },
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           name: "Certamen 26 años",
           date: "2025-09-20T13:00:00.000Z",
