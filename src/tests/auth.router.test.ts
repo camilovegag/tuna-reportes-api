@@ -11,7 +11,12 @@ import type { ErrorResponse } from "../types/error";
 const mockRequest: RegisterInput = {
   email: "user@email.com",
   password: "password",
-  vinculationCode: "5121caa3-3682-4381-8b97-2ccba11af93b",
+  vinculationCode: "5121caa3-3682-4381-8b97-2ccba11af93c",
+};
+
+const mockLogin: LoginInput = {
+  email: "user@email.com",
+  password: "password",
 };
 
 beforeEach(async () => {
@@ -192,6 +197,172 @@ describe("POST /auth/register", () => {
 
     it("should return an error message", () => {
       expect(data.error.message).toBe("Email is already registered");
+    });
+  });
+});
+
+describe("POST /auth/login", () => {
+  describe("when credentials are valid", async () => {
+    let response: Response;
+    let data: AuthLoginPostResponse;
+
+    beforeEach(async () => {
+      await app.request("/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(mockRequest),
+      });
+
+      response = await app.request("/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(mockLogin),
+      });
+      data = (await response.json()) as AuthLoginPostResponse;
+    });
+
+    it("should respond with 200 OK", () => {
+      expect(response.status).toBe(200);
+    });
+
+    it("should return a JWT token", () => {
+      expect(data).toHaveProperty("token");
+      expect(data?.token).toBeTypeOf("string");
+    });
+
+    it("should return the user info", () => {
+      expect(data).toHaveProperty("user");
+      expect(data.user).toMatchObject({
+        email: mockLogin.email,
+        role: expect.any(String),
+        id: expect.any(String),
+      });
+    });
+  });
+  describe("when email does not exist", () => {
+    let response: Response;
+    let data: ErrorResponse;
+
+    beforeEach(async () => {
+      response = await app.request("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...mockLogin, email: "nouser@email.com" }),
+      });
+      data = (await response.json()) as ErrorResponse;
+    });
+
+    it("should respond with 401 Unauthorized", () => {
+      expect(response.status).toBe(401);
+    });
+
+    it("should return an error message", () => {
+      expect(data.error.message).toBe("Invalid credentials");
+    });
+  });
+
+  describe("when password is incorrect", () => {
+    let response: Response;
+    let data: ErrorResponse;
+
+    beforeEach(async () => {
+      await app.request("/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mockRequest),
+      });
+
+      response = await app.request("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...mockLogin, password: "wrongpassword" }),
+      });
+      data = (await response.json()) as ErrorResponse;
+    });
+
+    it("should respond with 401 Unauthorized", () => {
+      expect(response.status).toBe(401);
+    });
+
+    it("should return an error message", () => {
+      expect(data.error.message).toBe("Invalid credentials");
+    });
+  });
+
+  describe("when email is invalid format", () => {
+    let response: Response;
+    let data: ErrorResponse;
+
+    beforeEach(async () => {
+      response = await app.request("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...mockLogin, email: "notanemail" }),
+      });
+      data = (await response.json()) as ErrorResponse;
+    });
+
+    it("should respond with 400 Bad Request", () => {
+      expect(response.status).toBe(400);
+    });
+
+    it("should return a validation error message", () => {
+      expect(data.error.message).toBe("Validation failed");
+      expect(data.error.details?.email).toContain("Invalid email address");
+    });
+  });
+
+  describe("when password is missing", () => {
+    let response: Response;
+    let data: ErrorResponse;
+
+    beforeEach(async () => {
+      response = await app.request("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: mockLogin.email }),
+      });
+      data = (await response.json()) as ErrorResponse;
+    });
+
+    it("should respond with 400 Bad Request", () => {
+      expect(response.status).toBe(400);
+    });
+
+    it("should return a validation error message", () => {
+      expect(data.error.message).toBe("Validation failed");
+      expect(data.error.details?.password).toContain(
+        "Invalid input: expected string, received undefined",
+      );
+    });
+  });
+
+  describe("when password does not meet the criteria", () => {
+    let response: Response;
+    let data: ErrorResponse;
+
+    beforeEach(async () => {
+      response = await app.request("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: mockLogin.email, password: "1234" }),
+      });
+      data = (await response.json()) as ErrorResponse;
+    });
+
+    it("should respond with 400 Bad Request", () => {
+      expect(response.status).toBe(400);
+    });
+
+    it("should return a validation error message", () => {
+      expect(data.error.message).toBe("Validation failed");
+      expect(data.error.details?.password).toContain(
+        "Password must be at least 8 characters",
+      );
     });
   });
 });
