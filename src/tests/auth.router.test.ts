@@ -197,7 +197,7 @@ describe("POST /auth/register", () => {
 });
 
 describe("POST /auth/login", () => {
-  describe("when credentials are valid", async () => {
+  describe("when credentials are valid", () => {
     let response: Response;
     let data: AuthLoginPostResponse;
 
