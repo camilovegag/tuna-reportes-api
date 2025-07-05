@@ -10,6 +10,7 @@ import {
 } from "../schemas/events.schema";
 import type { ErrorResponse } from "../types/error";
 import type { EventPostResponse, EventsGetResponse } from "../types/event";
+import type { AuthUserPayload } from "../types/auth";
 
 export async function getEventsController(c: Context) {
   try {
@@ -94,7 +95,7 @@ export async function createEventController(c: Context) {
     return c.json(errorResponse, 400);
   }
 
-  const user = c.get("user");
+  const user = c.get("user") as AuthUserPayload;
 
   try {
     const insertData = {
@@ -172,7 +173,7 @@ export async function updateEventController(c: Context) {
     );
   }
 
-  const user = c.get("user");
+  const user = c.get("user") as AuthUserPayload;
 
   try {
     const updateData = {
