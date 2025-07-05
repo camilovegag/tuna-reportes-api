@@ -1,7 +1,10 @@
+import { eq } from "drizzle-orm";
 import type { Context, Next } from "hono";
-import type { ErrorResponse } from "../types/error";
-import { ERROR_CODES } from "../constants/error-codes";
 import { verify } from "hono/jwt";
+import { ERROR_CODES } from "../constants/error-codes";
+import { db, dbSchema } from "../db";
+import type { AuthUserPayload } from "../types/auth";
+import type { ErrorResponse } from "../types/error";
 
 export async function authMiddleware(c: Context, next: Next) {
   const authHeader = c.req.header("Authorization");
@@ -18,7 +21,27 @@ export async function authMiddleware(c: Context, next: Next) {
   const token = authHeader.replace("Bearer ", "");
 
   try {
-    const payload = await verify(token, process.env.JWT_SECRET!);
+    const payload = (await verify(
+      token,
+      process.env.JWT_SECRET!,
+    )) as AuthUserPayload;
+
+    const [user] = await db
+      .select()
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.id, payload.userId));
+
+    if (!user) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "User not found",
+          code: ERROR_CODES.UNAUTHORIZED,
+        },
+      };
+
+      return c.json(errorResponse, 401);
+    }
+
     c.set("user", payload);
     await next();
   } catch (error) {
