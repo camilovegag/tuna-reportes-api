@@ -1,9 +1,5 @@
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { dbSchema } from "../db";
 import type { authProvider } from "../db/schema";
-
-export const userInsertSchema = createInsertSchema(dbSchema.users);
 
 export const registerSchema = z.object({
   email: z.email(),
