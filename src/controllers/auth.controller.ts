@@ -1,20 +1,25 @@
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
+import jwt from "jsonwebtoken";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
-import { registerSchema, type AuthProvider } from "../schemas/auth.schema";
+import {
+  loginSchema,
+  registerSchema,
+  type AuthProvider,
+} from "../schemas/auth.schema";
 import type { AuthRegisterPostResponse } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
 
-export default async function postRegisterController(c: Context) {
+export async function postRegisterController(c: Context) {
   const body = await c.req.json();
   const result = registerSchema.safeParse(body);
 
   if (!result.success) {
-    const tree = z.treeifyError(result.error);
+    const { properties } = z.treeifyError(result.error);
     const flatErrors = Object.fromEntries(
-      Object.entries(tree.properties ?? {}).map(([key, value]) => [
+      Object.entries(properties ?? {}).map(([key, value]) => [
         key,
         value.errors,
       ]),
@@ -115,4 +120,72 @@ export default async function postRegisterController(c: Context) {
     };
     return c.json(errorResponse, 500);
   }
+}
+
+export async function postLoginController(c: Context) {
+  const body = await c.req.json();
+  const result = await loginSchema.safeParse(body);
+
+  if (!result.success) {
+    const { properties } = z.treeifyError(result.error);
+    const flatErrors = Object.fromEntries(
+      Object.entries(properties ?? {}).map(([key, value]) => [
+        key,
+        value.errors,
+      ]),
+    );
+
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Validation failed",
+        details: flatErrors,
+        code: ERROR_CODES.VALIDATION,
+      },
+    };
+    return c.json(errorResponse, 400);
+  }
+
+  const [user] = await db
+    .select()
+    .from(dbSchema.users)
+    .where(eq(dbSchema.users.email, result.data.email));
+
+  if (user && user.passwordHash) {
+    const passwordMatch = await Bun.password.verify(
+      result.data.password,
+      user.passwordHash,
+    );
+
+    if (passwordMatch) {
+      const token = jwt.sign(
+        {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "1d" },
+      );
+      return c.json(
+        {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+          },
+        },
+        200,
+      );
+    }
+  }
+
+  const errorResponse: ErrorResponse = {
+    error: {
+      message: "Invalid credentials",
+      code: ERROR_CODES.UNAUTHORIZED,
+    },
+  };
+
+  return c.json(errorResponse, 401);
 }
