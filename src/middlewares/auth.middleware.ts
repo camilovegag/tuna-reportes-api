@@ -24,8 +24,7 @@ export async function authMiddleware(c: Context, next: Next) {
   } catch (error) {
     const errorResponse: ErrorResponse = {
       error: {
-        message:
-          error instanceof Error ? error.message : "Invalid or expired token",
+        message: "Invalid or expired token",
         code: ERROR_CODES.VALIDATION,
       },
     };
