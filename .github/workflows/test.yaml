@@ -35,6 +35,9 @@ jobs:
       - name: Set DATABASE_URL from secret
         run: echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
 
+      - name: Set JWT_SECRET from secret
+        run: echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: bun install
 
