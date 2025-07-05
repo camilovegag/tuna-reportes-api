@@ -161,7 +161,7 @@ export async function postLoginController(c: Context) {
         userId: user.id,
         email: user.email,
         role: user.role,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 1 día
+        exp: Math.floor(Date.now() / 1000) + 3600 * 24, // 1 day
       };
       const token = await sign(payload, process.env.JWT_SECRET!);
 
