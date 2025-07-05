@@ -27,11 +27,6 @@ beforeEach(async () => {
     fullName: "Test User",
     vinculationCode: mockRequest.vinculationCode,
   });
-
-  console.log(
-    "inserted user with vinculationCode:",
-    mockRequest.vinculationCode,
-  );
 });
 
 afterEach(async () => {
