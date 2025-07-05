@@ -11,3 +11,10 @@ export type AuthLoginPostResponse = {
     role: string;
   };
 };
+
+export type AuthUserPayload = {
+  userId: string;
+  email: string;
+  role: string;
+  exp: number;
+};

@@ -5,12 +5,13 @@ import {
   getEventsController,
   updateEventController,
 } from "../controllers/events.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 const eventsRouter = new Hono();
 
-eventsRouter.get("/:id", getEventController);
-eventsRouter.get("/", getEventsController);
-eventsRouter.post("/", createEventController);
-eventsRouter.patch("/:id", updateEventController);
+eventsRouter.get("/:id", authMiddleware, getEventController);
+eventsRouter.get("/", authMiddleware, getEventsController);
+eventsRouter.post("/", authMiddleware, createEventController);
+eventsRouter.patch("/:id", authMiddleware, updateEventController);
 
 export default eventsRouter;

@@ -14,12 +14,10 @@
     "db:studio": "npx drizzle-kit studio"
   },
   "dependencies": {
-    "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
     "drizzle-zod": "^0.8.2",
     "hono": "^4.7.5",
-    "jsonwebtoken": "^9.0.2",
     "postgres": "^3.4.7",
     "zod": "^3.25.20"
   },

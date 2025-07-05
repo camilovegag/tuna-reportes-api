@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
-import jwt from "jsonwebtoken";
+import { sign } from "hono/jwt";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
@@ -157,15 +157,14 @@ export async function postLoginController(c: Context) {
     );
 
     if (passwordMatch) {
-      const token = jwt.sign(
-        {
-          userId: user.id,
-          email: user.email,
-          role: user.role,
-        },
-        process.env.JWT_SECRET!,
-        { expiresIn: "1d" },
-      );
+      const payload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        exp: Math.floor(Date.now() / 1000) + 3600 * 24, // 1 day
+      };
+      const token = await sign(payload, process.env.JWT_SECRET!);
+
       return c.json(
         {
           token,
