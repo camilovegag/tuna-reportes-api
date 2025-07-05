@@ -124,7 +124,7 @@ export async function postRegisterController(c: Context) {
 
 export async function postLoginController(c: Context) {
   const body = await c.req.json();
-  const result = await loginSchema.safeParse(body);
+  const result = loginSchema.safeParse(body);
 
   if (!result.success) {
     const { properties } = z.treeifyError(result.error);
