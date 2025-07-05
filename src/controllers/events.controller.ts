@@ -94,10 +94,17 @@ export async function createEventController(c: Context) {
     return c.json(errorResponse, 400);
   }
 
+  const user = c.get("user");
+
   try {
+    const insertData = {
+      ...result.data,
+      createdBy: user.userId,
+    };
+
     const [inserted] = await db
       .insert(dbSchema.events)
-      .values(result.data)
+      .values(insertData)
       .returning({ id: dbSchema.events.id });
 
     if (!inserted || !inserted.id) {
@@ -165,10 +172,13 @@ export async function updateEventController(c: Context) {
     );
   }
 
+  const user = c.get("user");
+
   try {
     const updateData = {
       ...result.data,
       updatedAt: new Date().toISOString(),
+      updatedBy: user.userId,
     };
     const [updatedEvent] = await db
       .update(dbSchema.events)
