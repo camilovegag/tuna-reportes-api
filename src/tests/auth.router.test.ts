@@ -7,6 +7,9 @@ import type {
   AuthRegisterPostResponse,
 } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
+import { createTestMember, createTestUser, loginTestUser } from "../utils/test";
+import type { Member } from "../types/member";
+import { randomUUID } from "crypto";
 
 const mockRequest: RegisterInput = {
   email: "user@email.com",
@@ -19,14 +22,10 @@ const mockLogin: LoginInput = {
   password: "password",
 };
 
+let member: Member;
+
 beforeEach(async () => {
-  await db.insert(dbSchema.members).values({
-    rank: "tuno",
-    birthDate: "2000-01-01",
-    nickname: "testnick",
-    fullName: "Test User",
-    vinculationCode: mockRequest.vinculationCode,
-  });
+  member = await createTestMember();
 });
 
 afterEach(async () => {
@@ -39,12 +38,9 @@ describe("POST /auth/register", () => {
     let response: Response;
     let data: AuthRegisterPostResponse;
     beforeEach(async () => {
-      response = await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mockRequest),
-      });
-      data = (await response.json()) as AuthRegisterPostResponse;
+      const result = await createTestUser({}, member.vinculationCode);
+      response = result.response;
+      data = result.data as AuthRegisterPostResponse;
     });
 
     it("should respond with 201 Created", () => {
@@ -61,13 +57,12 @@ describe("POST /auth/register", () => {
     let response: Response;
     let data: ErrorResponse;
     beforeEach(async () => {
-      const badRequest = { ...mockRequest, email: "invalid-email" };
-      response = await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(badRequest),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await createTestUser(
+        { email: "invalid-email" },
+        member.vinculationCode,
+      );
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -84,13 +79,12 @@ describe("POST /auth/register", () => {
     let response: Response;
     let data: ErrorResponse;
     beforeEach(async () => {
-      const badRequest = { ...mockRequest, password: "1234" };
-      response = await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(badRequest),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await createTestUser(
+        { password: "1234" },
+        member.vinculationCode,
+      );
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -109,16 +103,9 @@ describe("POST /auth/register", () => {
     let response: Response;
     let data: ErrorResponse;
     beforeEach(async () => {
-      const badRequest = {
-        ...mockRequest,
-        vinculationCode: "invalid-vinculation-code",
-      };
-      response = await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(badRequest),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await createTestUser({}, "invalid-vinculation-code");
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -134,16 +121,9 @@ describe("POST /auth/register", () => {
     let response: Response;
     let data: ErrorResponse;
     beforeEach(async () => {
-      const badRequest = {
-        ...mockRequest,
-        vinculationCode: "a6c56b4c-5234-4fbb-bf87-dacef19e89b2",
-      };
-      response = await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(badRequest),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await createTestUser({}, randomUUID());
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -160,30 +140,14 @@ describe("POST /auth/register", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      await db.insert(dbSchema.members).values({
-        rank: "tuno",
-        birthDate: "2000-01-01",
-        nickname: "testnick2",
-        fullName: "Test User 2",
+      const newMember = await createTestMember({
         vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
       });
+      await createTestUser({}, member.vinculationCode);
 
-      await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mockRequest),
-      });
-
-      response = await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...mockRequest,
-          vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
-        }),
-      });
-
-      data = (await response.json()) as ErrorResponse;
+      const result = await createTestUser({}, newMember.vinculationCode);
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -202,22 +166,11 @@ describe("POST /auth/login", () => {
     let data: AuthLoginPostResponse;
 
     beforeEach(async () => {
-      await app.request("/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(mockRequest),
-      });
+      await createTestUser({}, member.vinculationCode);
 
-      response = await app.request("/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(mockLogin),
-      });
-      data = (await response.json()) as AuthLoginPostResponse;
+      const result = await loginTestUser("user@email.com", "password");
+      response = result.response;
+      data = result.data as AuthLoginPostResponse;
     });
 
     it("should respond with 200 OK", () => {
@@ -243,12 +196,9 @@ describe("POST /auth/login", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      response = await app.request("/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...mockLogin, email: "nouser@email.com" }),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await loginTestUser("nouser@email.com", "password");
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 401 Unauthorized", () => {
@@ -265,18 +215,11 @@ describe("POST /auth/login", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      await app.request("/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mockRequest),
-      });
+      await createTestUser({}, member.vinculationCode);
 
-      response = await app.request("/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...mockLogin, password: "wrongpassword" }),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await loginTestUser("user@email.com", "wrongpassword");
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 401 Unauthorized", () => {
@@ -293,12 +236,9 @@ describe("POST /auth/login", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      response = await app.request("/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...mockLogin, email: "notanemail" }),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await loginTestUser("notanemail", "password");
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -311,17 +251,35 @@ describe("POST /auth/login", () => {
     });
   });
 
+  describe("when email is missing", () => {
+    let response: Response;
+    let data: ErrorResponse;
+
+    beforeEach(async () => {
+      const result = await loginTestUser(undefined, "password");
+      response = result.response;
+      data = result.data as ErrorResponse;
+    });
+
+    it("should respond with 400 Bad Request", () => {
+      expect(response.status).toBe(400);
+    });
+
+    it("should return a validation error message", () => {
+      expect(data.error.message).toBe("Validation failed");
+      expect(data.error.details?.email).toContain(
+        "Invalid input: expected string, received undefined",
+      );
+    });
+  });
   describe("when password is missing", () => {
     let response: Response;
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      response = await app.request("/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: mockLogin.email }),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await loginTestUser("notanemail", undefined);
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
@@ -341,12 +299,9 @@ describe("POST /auth/login", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      response = await app.request("/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: mockLogin.email, password: "1234" }),
-      });
-      data = (await response.json()) as ErrorResponse;
+      const result = await loginTestUser("user@email.com", "1234");
+      response = result.response;
+      data = result.data as ErrorResponse;
     });
 
     it("should respond with 400 Bad Request", () => {
