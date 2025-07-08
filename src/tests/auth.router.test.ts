@@ -1,31 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import app from "../app";
+import { randomUUID } from "crypto";
 import { db, dbSchema } from "../db";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schema";
 import type {
   AuthLoginPostResponse,
   AuthRegisterPostResponse,
 } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
-import { createTestMember, createTestUser, loginTestUser } from "../utils/test";
 import type { Member } from "../types/member";
-import { randomUUID } from "crypto";
-
-const mockRequest: RegisterInput = {
-  email: "user@email.com",
-  password: "password",
-  vinculationCode: "5121caa3-3682-4381-8b97-2ccba11af93c",
-};
-
-const mockLogin: LoginInput = {
-  email: "user@email.com",
-  password: "password",
-};
+import {
+  createTestMember,
+  createTestUser,
+  loginTestUser,
+  seedTestMember,
+} from "../utils/test";
 
 let member: Member;
+let token: string;
 
 beforeEach(async () => {
-  member = await createTestMember();
+  member = await seedTestMember();
+  await createTestUser({ email: "admin@email.com" }, member.vinculationCode);
+  const response = await loginTestUser("admin@email.com", "password");
+  if ("token" in response.data) {
+    token = response.data.token;
+  } else {
+    throw new Error(
+      "Failed to login test user: " + JSON.stringify(response.data),
+    );
+  }
 });
 
 afterEach(async () => {
@@ -38,7 +40,9 @@ describe("POST /auth/register", () => {
     let response: Response;
     let data: AuthRegisterPostResponse;
     beforeEach(async () => {
-      const result = await createTestUser({}, member.vinculationCode);
+      const vinculationCode = randomUUID();
+      await createTestMember({}, vinculationCode, token);
+      const result = await createTestUser({}, vinculationCode);
       response = result.response;
       data = result.data as AuthRegisterPostResponse;
     });
@@ -140,12 +144,14 @@ describe("POST /auth/register", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      const newMember = await createTestMember({
-        vinculationCode: "dc7994bd-77fa-479b-88a7-bcafc4ed6f26",
-      });
-      await createTestUser({}, member.vinculationCode);
+      const vinculationCode = randomUUID();
+      await createTestMember({}, vinculationCode, token);
+      await createTestUser({}, vinculationCode);
 
-      const result = await createTestUser({}, newMember.vinculationCode);
+      const result = await createTestUser(
+        { email: "user@email.com" },
+        vinculationCode,
+      );
       response = result.response;
       data = result.data as ErrorResponse;
     });
@@ -166,7 +172,9 @@ describe("POST /auth/login", () => {
     let data: AuthLoginPostResponse;
 
     beforeEach(async () => {
-      await createTestUser({}, member.vinculationCode);
+      const vinculationCode = randomUUID();
+      await createTestMember({}, vinculationCode, token);
+      await createTestUser({}, vinculationCode);
 
       const result = await loginTestUser("user@email.com", "password");
       response = result.response;
@@ -185,7 +193,7 @@ describe("POST /auth/login", () => {
     it("should return the user info", () => {
       expect(data).toHaveProperty("user");
       expect(data.user).toMatchObject({
-        email: mockLogin.email,
+        email: "user@email.com",
         role: expect.any(String),
         id: expect.any(String),
       });

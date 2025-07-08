@@ -10,7 +10,7 @@ import type {
 } from "../types/event";
 import {
   createTestEvent,
-  createTestMember,
+  seedTestMember,
   createTestUser,
   defaultEventData,
   loginTestUser,
@@ -19,7 +19,7 @@ import {
 let token: string;
 
 beforeEach(async () => {
-  const member = await createTestMember();
+  const member = await seedTestMember();
   await createTestUser({}, member.vinculationCode);
   const response = await loginTestUser("user@email.com", "password");
   if ("token" in response.data) {
