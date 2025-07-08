@@ -1,4 +1,4 @@
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import { dbSchema } from "../db";
 
 export const memberInsertSchema = createInsertSchema(dbSchema.members, {
@@ -6,3 +6,12 @@ export const memberInsertSchema = createInsertSchema(dbSchema.members, {
   nickname: (schema) => schema.nonempty("Nickname cannot be empty"),
   birthDate: (schema) => schema.nonempty("Birth date cannot be empty"),
 });
+
+export const memberUpdateSchema = createUpdateSchema(dbSchema.members)
+  .omit({
+    id: true,
+    vinculationCode: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .strict();

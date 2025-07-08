@@ -13,3 +13,13 @@ export type MemberPostResponse = {
   id: string;
   message: string;
 };
+
+export type MemberPatchResponse = {
+  id: string;
+  message: string;
+};
+
+export type MemberDeleteResponse = {
+  id: string;
+  message: string;
+};
