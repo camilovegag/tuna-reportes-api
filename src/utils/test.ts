@@ -4,19 +4,16 @@ import type {
   AuthLoginPostResponse,
   AuthRegisterPostResponse,
 } from "../types/auth";
-import { randomUUID } from "crypto";
-import type { MemberInsert } from "../types/member";
+import type { MemberInsert, MemberPostResponse } from "../types/member";
 import type { EventPostResponse } from "../types/event";
 import type { ErrorResponse } from "../types/error";
 
-export async function createTestMember(memberData = {}) {
+export async function seedTestMember() {
   const defaultMember: MemberInsert = {
     rank: "tuno",
     birthDate: "2000-01-01",
     nickname: "testnick",
     fullName: "Test User",
-    vinculationCode: randomUUID(),
-    ...memberData,
   };
   const [member] = await db
     .insert(dbSchema.members)
@@ -26,6 +23,32 @@ export async function createTestMember(memberData = {}) {
   if (!member) throw new Error("Failed to create test member");
 
   return member;
+}
+
+export async function createTestMember(
+  memberData = {},
+  vinculationCode: string,
+  token: string,
+) {
+  const defaultMember: MemberInsert = {
+    rank: "tuno",
+    birthDate: "2000-01-01",
+    nickname: "new",
+    fullName: "New User",
+    vinculationCode,
+    ...memberData,
+  };
+  const response = await app.request("/members", {
+    method: "POST",
+    headers: {
+      "Content-type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(defaultMember),
+  });
+  const data = (await response.json()) as MemberPostResponse;
+
+  return { response, data };
 }
 
 export async function createTestUser(userData = {}, vinculationCode: string) {
