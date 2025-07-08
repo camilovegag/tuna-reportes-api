@@ -98,7 +98,7 @@ export async function createTestEvent(eventData = {}, token: string) {
       "Content-type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ ...defaultEventData, eventData }),
+    body: JSON.stringify({ ...defaultEventData, ...eventData }),
   });
   const data = (await response.json()) as EventPostResponse;
   return { response, data };

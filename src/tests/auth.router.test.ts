@@ -285,7 +285,7 @@ describe("POST /auth/login", () => {
     let data: ErrorResponse;
 
     beforeEach(async () => {
-      const result = await loginTestUser("notanemail", undefined);
+      const result = await loginTestUser("user@email.com", undefined);
       response = result.response;
       data = result.data as ErrorResponse;
     });
