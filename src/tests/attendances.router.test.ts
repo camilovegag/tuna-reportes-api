@@ -111,7 +111,7 @@ describe("GET /attendances", () => {
     it("should return attendances for that event", () => {
       expect(data.attendances).toBeArray();
       expect(data.count).toBe(1);
-      expect(data.attendances[0].eventId).toBe(eventId);
+      expect(data.attendances[0]?.eventId).toBe(eventId);
     });
   });
 });
