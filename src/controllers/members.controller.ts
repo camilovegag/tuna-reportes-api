@@ -15,9 +15,36 @@ import {
 } from "../schemas/members.schema";
 import { z } from "zod/v4";
 
+export async function getMembersForRegistrationController(c: Context) {
+  try {
+    const members = await db
+      .select({
+        id: dbSchema.members.id,
+        nickname: dbSchema.members.nickname,
+        fullName: dbSchema.members.fullName,
+      })
+      .from(dbSchema.members)
+      .where(eq(dbSchema.members.isActive, true));
+
+    return c.json(members, 200);
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
+      },
+    };
+    return c.json(errorResponse, 500);
+  }
+}
+
 export async function getMembersController(c: Context) {
   try {
-    const members = await db.select().from(dbSchema.members);
+    const members = await db
+      .select()
+      .from(dbSchema.members)
+      .where(eq(dbSchema.members.isActive, true));
     const response: MembersGetResponse = {
       members,
       count: members.length,
