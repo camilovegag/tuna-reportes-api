@@ -4,12 +4,14 @@ import {
   deleteMemberController,
   getMemberController,
   getMembersController,
+  getMembersForRegistrationController,
   patchMemberController,
   postMemberController,
 } from "../controllers/members.controller";
 
 const membersRouter = new Hono();
 
+membersRouter.get("/registration", getMembersForRegistrationController);
 membersRouter.get("/", authMiddleware, getMembersController);
 membersRouter.get("/:id", authMiddleware, getMemberController);
 membersRouter.post("/", authMiddleware, postMemberController);
