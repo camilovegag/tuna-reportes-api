@@ -130,6 +130,7 @@ export const members = pgTable(
     joinedAt: date("joined_at"),
     becaDate: date("beca_date"),
     deceasedAt: date("deceased_at"),
+    isActive: boolean("is_active").default(true).notNull(),
     imageUrl: text("image_url"),
     vinculationCode: uuid("vinculation_code").defaultRandom().notNull(),
     createdAt: timestamp("created_at", {
