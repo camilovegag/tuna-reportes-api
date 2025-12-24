@@ -1,18 +1,33 @@
 import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import app from "../app";
-import { db } from "../db";
+import { db, dbSchema } from "../db";
 import { clients } from "../db/schema";
 import type { ApiResponse } from "../types/common";
 import type { Client, ClientsGetResponse } from "../types/client";
+import { createTestUser, loginTestUser, seedTestMember } from "../utils/test";
+import type { Member } from "../types/member";
 
 describe("Clients Router", () => {
+  let token: string;
+  let member: Member;
+
   // Clean up database before and after tests
   const cleanup = async () => {
     await db.delete(clients);
+    await db.delete(dbSchema.users);
+    await db.delete(dbSchema.members);
   };
 
   beforeAll(async () => {
     await cleanup();
+    member = await seedTestMember();
+    await createTestUser({ email: "admin@email.com" }, member.vinculationCode);
+    const response = await loginTestUser("admin@email.com", "password");
+    if ("token" in response.data) {
+      token = response.data.token;
+    } else {
+      throw new Error("Failed to login test user");
+    }
   });
 
   afterAll(async () => {
@@ -31,7 +46,10 @@ describe("Clients Router", () => {
 
     const res = await app.request("/clients", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(newClient),
     });
 
@@ -46,7 +64,9 @@ describe("Clients Router", () => {
   });
 
   it("GET /clients - should return a list of clients", async () => {
-    const res = await app.request("/clients");
+    const res = await app.request("/clients", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as ApiResponse<ClientsGetResponse>;
     expect(body.success).toBe(true);
@@ -57,7 +77,9 @@ describe("Clients Router", () => {
   });
 
   it("GET /clients/:id - should return a specific client", async () => {
-    const res = await app.request(`/clients/${createdClientId}`);
+    const res = await app.request(`/clients/${createdClientId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as ApiResponse<Client>;
     expect(body.success).toBe(true);
@@ -74,7 +96,10 @@ describe("Clients Router", () => {
 
     const res = await app.request(`/clients/${createdClientId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(updateData),
     });
 
@@ -90,6 +115,7 @@ describe("Clients Router", () => {
   it("DELETE /clients/:id - should delete a client", async () => {
     const res = await app.request(`/clients/${createdClientId}`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     expect(res.status).toBe(200);
@@ -97,7 +123,9 @@ describe("Clients Router", () => {
     expect(body.success).toBe(true);
 
     // Verify deletion
-    const checkRes = await app.request(`/clients/${createdClientId}`);
+    const checkRes = await app.request(`/clients/${createdClientId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(checkRes.status).toBe(404);
   });
 });
