@@ -11,3 +11,9 @@ export type ListResponse<T> = {
   pageSize?: number;
   totalPages?: number;
 };
+
+export type ApiResponse<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
