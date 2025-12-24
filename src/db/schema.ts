@@ -69,11 +69,7 @@ export const eventType = pgEnum("event_type", [
 ]);
 export const memberRank = pgEnum("member_rank", ["aspirante", "bulto", "tuno"]);
 export const userRole = pgEnum("user_role", ["admin", "editor", "viewer"]);
-export const authProvider = pgEnum("auth_provider", [
-  "local",
-  "google",
-  "clerk",
-]);
+export const authProvider = pgEnum("auth_provider", ["local", "google"]);
 
 export const users = pgTable(
   "users",
