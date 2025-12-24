@@ -70,6 +70,15 @@ export const eventType = pgEnum("event_type", [
 export const memberRank = pgEnum("member_rank", ["aspirante", "bulto", "tuno"]);
 export const userRole = pgEnum("user_role", ["admin", "editor", "viewer"]);
 export const authProvider = pgEnum("auth_provider", ["local", "google"]);
+export const serenadeOccasion = pgEnum("serenade_occasion", [
+  "cumpleanos",
+  "matrimonio",
+  "grado",
+  "quince_anos",
+  "aniversario",
+  "despedida",
+  "otro",
+]);
 
 export const users = pgTable(
   "users",
@@ -207,5 +216,56 @@ export const events = pgTable(
       foreignColumns: [users.id],
       name: "events_updated_by_fkey",
     }),
+  ],
+);
+
+export const clients = pgTable("clients", {
+  id: uuid().defaultRandom().primaryKey().notNull(),
+  name: text().notNull(),
+  phone: varchar({ length: 20 }).notNull(),
+  email: varchar({ length: 255 }),
+  notes: text(),
+  createdAt: timestamp("created_at", {
+    withTimezone: true,
+    mode: "string",
+  }).defaultNow(),
+  updatedAt: timestamp("updated_at", {
+    withTimezone: true,
+    mode: "string",
+  }).defaultNow(),
+});
+
+export const serenadeBookings = pgTable(
+  "serenade_bookings",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    eventId: uuid("event_id").notNull(),
+    clientId: uuid("client_id").notNull(),
+    price: integer().notNull(),
+    transportationCost: integer("transportation_cost").default(0),
+    occasion: serenadeOccasion().notNull(),
+    occasionDetails: text("occasion_details"),
+    specialRequests: text("special_requests"),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "string",
+    }).defaultNow(),
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+      mode: "string",
+    }).defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.eventId],
+      foreignColumns: [events.id],
+      name: "serenade_bookings_event_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.clientId],
+      foreignColumns: [clients.id],
+      name: "serenade_bookings_client_id_fkey",
+    }).onDelete("restrict"),
+    unique("serenade_bookings_event_id_unique").on(table.eventId),
   ],
 );
