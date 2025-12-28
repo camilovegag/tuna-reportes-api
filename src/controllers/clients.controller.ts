@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import type { Context } from "hono";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { db } from "../db";
 import { clients } from "../db/schema";
 import {
@@ -8,8 +8,9 @@ import {
   clientUpdateSchema,
   clientIdSchema,
 } from "../schemas/clients.schema";
-import type { ApiResponse } from "../types/common";
+import type { ErrorResponse } from "../types/error";
 import type { Client, ClientsGetResponse } from "../types/client";
+import { ERROR_CODES } from "../constants/error-codes";
 
 export const getClients = async (c: Context): Promise<Response> => {
   try {
@@ -22,19 +23,16 @@ export const getClients = async (c: Context): Promise<Response> => {
       count: result.length,
     };
 
-    return c.json<ApiResponse<ClientsGetResponse>>({
-      success: true,
-      data: response,
-    });
+    return c.json(response, 200);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to fetch clients",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -43,41 +41,38 @@ export const getClientById = async (c: Context): Promise<Response> => {
   const idValidation = clientIdSchema.shape.id.safeParse(id);
 
   if (!idValidation.success) {
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Invalid client ID format",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid client ID format",
+        code: ERROR_CODES.VALIDATION,
       },
-      400,
-    );
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
     const result = await db.select().from(clients).where(eq(clients.id, id));
 
     if (result.length === 0) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: "Client not found",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Client not found",
+          code: ERROR_CODES.NOT_FOUND,
         },
-        404,
-      );
+      };
+      return c.json(errorResponse, 404);
     }
 
-    return c.json<ApiResponse<Client>>({
-      success: true,
-      data: result[0],
-    });
+    return c.json(result[0], 200);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to fetch client",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -87,38 +82,46 @@ export const createClient = async (c: Context): Promise<Response> => {
     const validation = clientInsertSchema.safeParse(body);
 
     if (!validation.success) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error:
-            "Validation failed: " + JSON.stringify(validation.error.flatten()),
-        },
-        400,
+      const tree = z.treeifyError(validation.error as any);
+      const flatErrors = Object.fromEntries(
+        Object.entries((tree as any).properties ?? {}).map(([key, value]) => [
+          key,
+          (value as any).errors,
+        ]),
       );
+
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Validation failed",
+          details: flatErrors,
+          code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
     }
 
-    // Type assertion needed because optional().or(literal("")) creates a Union which Drizzle insert type might not perfectly infer as compatible with 'string | null | undefined'
-    const result = await db
-      .insert(clients)
-      .values(validation.data as any)
-      .returning();
+    const result = await db.insert(clients).values(validation.data).returning();
 
-    return c.json<ApiResponse<Client>>(
-      {
-        success: true,
-        data: result[0],
-      },
-      201,
-    );
+    if (!result[0]) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Failed to create client",
+          code: ERROR_CODES.INTERNAL,
+        },
+      };
+      return c.json(errorResponse, 500);
+    }
+
+    return c.json(result[0], 201);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to create client",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -127,13 +130,13 @@ export const updateClient = async (c: Context): Promise<Response> => {
   const idValidation = clientIdSchema.shape.id.safeParse(id);
 
   if (!idValidation.success) {
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Invalid client ID format",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid client ID format",
+        code: ERROR_CODES.VALIDATION,
       },
-      400,
-    );
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
@@ -141,45 +144,65 @@ export const updateClient = async (c: Context): Promise<Response> => {
     const validation = clientUpdateSchema.safeParse(body);
 
     if (!validation.success) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error:
-            "Validation failed: " + JSON.stringify(validation.error.flatten()),
-        },
-        400,
+      const tree = z.treeifyError(validation.error as any);
+      const flatErrors = Object.fromEntries(
+        Object.entries((tree as any).properties ?? {}).map(([key, value]) => [
+          key,
+          (value as any).errors,
+        ]),
       );
+
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Validation failed",
+          details: flatErrors,
+          code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
     }
+
+    if (Object.keys(validation.data).length === 0) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "No fields provided to update",
+          code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
+    }
+
+    const updateData = {
+      ...validation.data,
+      updatedAt: new Date().toISOString(),
+    };
 
     const result = await db
       .update(clients)
-      .set({ ...validation.data, updatedAt: new Date().toISOString() } as any)
+      .set(updateData)
       .where(eq(clients.id, id))
       .returning();
 
     if (result.length === 0) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: "Client not found",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Client not found",
+          code: ERROR_CODES.NOT_FOUND,
         },
-        404,
-      );
+      };
+      return c.json(errorResponse, 404);
     }
 
-    return c.json<ApiResponse<Client>>({
-      success: true,
-      data: result[0],
-    });
+    return c.json(result[0], 200);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to update client",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -188,13 +211,13 @@ export const deleteClient = async (c: Context): Promise<Response> => {
   const idValidation = clientIdSchema.shape.id.safeParse(id);
 
   if (!idValidation.success) {
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Invalid client ID format",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid client ID format",
+        code: ERROR_CODES.VALIDATION,
       },
-      400,
-    );
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
@@ -204,38 +227,35 @@ export const deleteClient = async (c: Context): Promise<Response> => {
       .returning();
 
     if (result.length === 0) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: "Client not found",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Client not found",
+          code: ERROR_CODES.NOT_FOUND,
         },
-        404,
-      );
+      };
+      return c.json(errorResponse, 404);
     }
 
-    return c.json<ApiResponse<Client>>({
-      success: true,
-      data: result[0],
-    });
+    return c.json(result[0], 200);
   } catch (error: any) {
     if (error.code === "23503") {
-      // Foreign key violation
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error:
-            "Cannot delete client because they have associated serenade bookings.",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message:
+            "Cannot delete client because they have associated serenade bookings",
+          code: ERROR_CODES.CONFLICT,
         },
-        409,
-      );
+      };
+      return c.json(errorResponse, 409);
     }
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to delete client",
+
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };

@@ -1,5 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import type { Context } from "hono";
+import { z } from "zod/v4";
 import { db } from "../db";
 import { serenadeBookings } from "../db/schema";
 import {
@@ -7,11 +8,12 @@ import {
   serenadeBookingUpdateSchema,
   serenadeBookingIdSchema,
 } from "../schemas/serenade-bookings.schema";
-import type { ApiResponse } from "../types/common";
+import type { ErrorResponse } from "../types/error";
 import type {
   SerenadeBooking,
   SerenadeBookingsGetResponse,
 } from "../types/serenade-booking";
+import { ERROR_CODES } from "../constants/error-codes";
 
 export const getSerenadeBookings = async (c: Context): Promise<Response> => {
   try {
@@ -24,19 +26,16 @@ export const getSerenadeBookings = async (c: Context): Promise<Response> => {
       count: result.length,
     };
 
-    return c.json<ApiResponse<SerenadeBookingsGetResponse>>({
-      success: true,
-      data: response,
-    });
+    return c.json(response, 200);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to fetch serenade bookings",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -45,13 +44,13 @@ export const getSerenadeBookingById = async (c: Context): Promise<Response> => {
   const idValidation = serenadeBookingIdSchema.shape.id.safeParse(id);
 
   if (!idValidation.success) {
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Invalid serenade booking ID format",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid serenade booking ID format",
+        code: ERROR_CODES.VALIDATION,
       },
-      400,
-    );
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
@@ -61,28 +60,25 @@ export const getSerenadeBookingById = async (c: Context): Promise<Response> => {
       .where(eq(serenadeBookings.id, id));
 
     if (result.length === 0) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: "Serenade booking not found",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Serenade booking not found",
+          code: ERROR_CODES.NOT_FOUND,
         },
-        404,
-      );
+      };
+      return c.json(errorResponse, 404);
     }
 
-    return c.json<ApiResponse<SerenadeBooking>>({
-      success: true,
-      data: result[0],
-    });
+    return c.json(result[0], 200);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to fetch serenade booking",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -92,14 +88,22 @@ export const createSerenadeBooking = async (c: Context): Promise<Response> => {
     const validation = serenadeBookingInsertSchema.safeParse(body);
 
     if (!validation.success) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error:
-            "Validation failed: " + JSON.stringify(validation.error.flatten()),
-        },
-        400,
+      const tree = z.treeifyError(validation.error);
+      const flatErrors = Object.fromEntries(
+        Object.entries(tree.properties ?? {}).map(([key, value]) => [
+          key,
+          value.errors,
+        ]),
       );
+
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Validation failed",
+          details: flatErrors,
+          code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
     }
 
     const result = await db
@@ -107,22 +111,48 @@ export const createSerenadeBooking = async (c: Context): Promise<Response> => {
       .values(validation.data)
       .returning();
 
-    return c.json<ApiResponse<SerenadeBooking>>(
-      {
-        success: true,
-        data: result[0],
+    if (!result[0]) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Failed to create serenade booking",
+          code: ERROR_CODES.INTERNAL,
+        },
+      };
+      return c.json(errorResponse, 500);
+    }
+
+    return c.json(result[0], 201);
+  } catch (error: any) {
+    // Foreign key constraint violation
+    if (error.code === "23503") {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Client or Event not found",
+          code: ERROR_CODES.NOT_FOUND,
+        },
+      };
+      return c.json(errorResponse, 404);
+    }
+
+    // Unique constraint violation (duplicate eventId)
+    if (error.code === "23505") {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "A serenade booking already exists for this event",
+          code: ERROR_CODES.CONFLICT,
+        },
+      };
+      return c.json(errorResponse, 409);
+    }
+
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      201,
-    );
-  } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to create serenade booking",
-      },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -131,13 +161,13 @@ export const updateSerenadeBooking = async (c: Context): Promise<Response> => {
   const idValidation = serenadeBookingIdSchema.shape.id.safeParse(id);
 
   if (!idValidation.success) {
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Invalid serenade booking ID format",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid serenade booking ID format",
+        code: ERROR_CODES.VALIDATION,
       },
-      400,
-    );
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
@@ -145,45 +175,76 @@ export const updateSerenadeBooking = async (c: Context): Promise<Response> => {
     const validation = serenadeBookingUpdateSchema.safeParse(body);
 
     if (!validation.success) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error:
-            "Validation failed: " + JSON.stringify(validation.error.flatten()),
-        },
-        400,
+      const tree = z.treeifyError(validation.error);
+      const flatErrors = Object.fromEntries(
+        Object.entries(tree.properties ?? {}).map(([key, value]) => [
+          key,
+          value.errors,
+        ]),
       );
+
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Validation failed",
+          details: flatErrors,
+          code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
     }
+
+    if (Object.keys(validation.data).length === 0) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "No fields provided to update",
+          code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
+    }
+
+    const updateData = {
+      ...validation.data,
+      updatedAt: new Date().toISOString(),
+    };
 
     const result = await db
       .update(serenadeBookings)
-      .set({ ...validation.data, updatedAt: new Date().toISOString() })
+      .set(updateData)
       .where(eq(serenadeBookings.id, id))
       .returning();
 
     if (result.length === 0) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: "Serenade booking not found",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Serenade booking not found",
+          code: ERROR_CODES.NOT_FOUND,
         },
-        404,
-      );
+      };
+      return c.json(errorResponse, 404);
     }
 
-    return c.json<ApiResponse<SerenadeBooking>>({
-      success: true,
-      data: result[0],
-    });
-  } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to update serenade booking",
+    return c.json(result[0], 200);
+  } catch (error: any) {
+    // Unique constraint violation when updating eventId
+    if (error.code === "23505") {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "A serenade booking already exists for this event",
+          code: ERROR_CODES.CONFLICT,
+        },
+      };
+      return c.json(errorResponse, 409);
+    }
+
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };
 
@@ -192,13 +253,13 @@ export const deleteSerenadeBooking = async (c: Context): Promise<Response> => {
   const idValidation = serenadeBookingIdSchema.shape.id.safeParse(id);
 
   if (!idValidation.success) {
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Invalid serenade booking ID format",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message: "Invalid serenade booking ID format",
+        code: ERROR_CODES.VALIDATION,
       },
-      400,
-    );
+    };
+    return c.json(errorResponse, 400);
   }
 
   try {
@@ -208,27 +269,24 @@ export const deleteSerenadeBooking = async (c: Context): Promise<Response> => {
       .returning();
 
     if (result.length === 0) {
-      return c.json<ApiResponse<null>>(
-        {
-          success: false,
-          error: "Serenade booking not found",
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Serenade booking not found",
+          code: ERROR_CODES.NOT_FOUND,
         },
-        404,
-      );
+      };
+      return c.json(errorResponse, 404);
     }
 
-    return c.json<ApiResponse<SerenadeBooking>>({
-      success: true,
-      data: result[0],
-    });
+    return c.json(result[0], 200);
   } catch (error) {
-    console.error(error);
-    return c.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: "Failed to delete serenade booking",
+    const errorResponse: ErrorResponse = {
+      error: {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
-      500,
-    );
+    };
+    return c.json(errorResponse, 500);
   }
 };

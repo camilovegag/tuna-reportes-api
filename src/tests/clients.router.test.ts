@@ -2,10 +2,10 @@ import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
 import { clients } from "../db/schema";
-import type { ApiResponse } from "../types/common";
 import type { Client, ClientsGetResponse } from "../types/client";
 import { createTestUser, loginTestUser, seedTestMember } from "../utils/test";
 import type { Member } from "../types/member";
+import type { ErrorResponse } from "../types/error";
 
 describe("Clients Router", () => {
   let token: string;
@@ -54,13 +54,10 @@ describe("Clients Router", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as ApiResponse<Client>;
-    expect(body.success).toBe(true);
-    expect(body.data).toHaveProperty("id");
-    if (body.data) {
-      expect(body.data.name).toBe(newClient.name);
-      createdClientId = body.data.id;
-    }
+    const body = (await res.json()) as Client;
+    expect(body).toHaveProperty("id");
+    expect(body.name).toBe(newClient.name);
+    createdClientId = body.id;
   });
 
   it("GET /clients - should return a list of clients", async () => {
@@ -68,12 +65,9 @@ describe("Clients Router", () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<ClientsGetResponse>;
-    expect(body.success).toBe(true);
-    if (body.data) {
-      expect(Array.isArray(body.data.items)).toBe(true);
-      expect(body.data.count).toBeGreaterThan(0);
-    }
+    const body = (await res.json()) as ClientsGetResponse;
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.count).toBeGreaterThan(0);
   });
 
   it("GET /clients/:id - should return a specific client", async () => {
@@ -81,11 +75,8 @@ describe("Clients Router", () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<Client>;
-    expect(body.success).toBe(true);
-    if (body.data) {
-      expect(body.data.id).toBe(createdClientId);
-    }
+    const body = (await res.json()) as Client;
+    expect(body.id).toBe(createdClientId);
   });
 
   it("PATCH /clients/:id - should update client details", async () => {
@@ -104,12 +95,24 @@ describe("Clients Router", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<Client>;
-    expect(body.success).toBe(true);
-    if (body.data) {
-      expect(body.data.name).toBe(updateData.name);
-      expect(body.data.phone).toBe(updateData.phone);
-    }
+    const body = (await res.json()) as Client;
+    expect(body.name).toBe(updateData.name);
+    expect(body.phone).toBe(updateData.phone);
+  });
+
+  it("PATCH /clients/:id - should reject empty update payload", async () => {
+    const res = await app.request(`/clients/${createdClientId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ErrorResponse;
+    expect(body.error.message).toContain("No fields provided");
   });
 
   it("DELETE /clients/:id - should delete a client", async () => {
@@ -119,8 +122,8 @@ describe("Clients Router", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<Client>;
-    expect(body.success).toBe(true);
+    const body = (await res.json()) as Client;
+    expect(body.id).toBe(createdClientId);
 
     // Verify deletion
     const checkRes = await app.request(`/clients/${createdClientId}`, {
