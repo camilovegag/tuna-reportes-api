@@ -82,11 +82,11 @@ export const createClient = async (c: Context): Promise<Response> => {
     const validation = clientInsertSchema.safeParse(body);
 
     if (!validation.success) {
-      const tree = z.treeifyError(validation.error as any);
+      const tree = z.treeifyError(validation.error);
       const flatErrors = Object.fromEntries(
-        Object.entries((tree as any).properties ?? {}).map(([key, value]) => [
+        Object.entries(tree.properties ?? {}).map(([key, value]) => [
           key,
-          (value as any).errors,
+          value.errors,
         ]),
       );
 
@@ -144,11 +144,11 @@ export const updateClient = async (c: Context): Promise<Response> => {
     const validation = clientUpdateSchema.safeParse(body);
 
     if (!validation.success) {
-      const tree = z.treeifyError(validation.error as any);
+      const tree = z.treeifyError(validation.error);
       const flatErrors = Object.fromEntries(
-        Object.entries((tree as any).properties ?? {}).map(([key, value]) => [
+        Object.entries(tree.properties ?? {}).map(([key, value]) => [
           key,
-          (value as any).errors,
+          value.errors,
         ]),
       );
 

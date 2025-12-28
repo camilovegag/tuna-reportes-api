@@ -1,5 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { serenadeBookings } from "../db/schema";
 
 export const serenadeBookingSelectSchema = createSelectSchema(serenadeBookings);
@@ -29,5 +29,5 @@ export const serenadeBookingUpdateSchema =
   serenadeBookingInsertSchema.partial();
 
 export const serenadeBookingIdSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });

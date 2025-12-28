@@ -1,5 +1,6 @@
 import app from "../app";
 import { db, dbSchema } from "../db";
+import { eq } from "drizzle-orm";
 import type {
   AuthLoginPostResponse,
   AuthRegisterPostResponse,
@@ -51,7 +52,11 @@ export async function createTestMember(
   return { response, data };
 }
 
-export async function createTestUser(userData = {}, vinculationCode: string) {
+export async function createTestUser(
+  userData = {},
+  vinculationCode: string,
+  role: "admin" | "editor" | "viewer" = "admin", // Default to admin for tests
+) {
   const defaultUser = {
     email: "user@email.com",
     password: "password",
@@ -66,6 +71,15 @@ export async function createTestUser(userData = {}, vinculationCode: string) {
   const data = (await response.json()) as
     | AuthRegisterPostResponse
     | ErrorResponse;
+
+  // Update role after registration since register endpoint doesn't accept role
+  if ("id" in data) {
+    await db
+      .update(dbSchema.users)
+      .set({ role })
+      .where(eq(dbSchema.users.id, data.id));
+  }
+
   return { response, data, user: defaultUser };
 }
 
