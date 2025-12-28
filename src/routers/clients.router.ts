@@ -1,4 +1,6 @@
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireRole } from "../middlewares/role.middleware";
+import { ROLES } from "../types/roles";
 import { Hono } from "hono";
 import {
   getClients,
@@ -10,10 +12,30 @@ import {
 
 const clientsRouter = new Hono();
 
+// Read: all authenticated users
 clientsRouter.get("/", authMiddleware, getClients);
 clientsRouter.get("/:id", authMiddleware, getClientById);
-clientsRouter.post("/", authMiddleware, createClient);
-clientsRouter.patch("/:id", authMiddleware, updateClient);
-clientsRouter.delete("/:id", authMiddleware, deleteClient);
+
+// Create/Update: admin and editor
+clientsRouter.post(
+  "/",
+  authMiddleware,
+  requireRole([ROLES.ADMIN, ROLES.EDITOR]),
+  createClient,
+);
+clientsRouter.patch(
+  "/:id",
+  authMiddleware,
+  requireRole([ROLES.ADMIN, ROLES.EDITOR]),
+  updateClient,
+);
+
+// Delete: admin only
+clientsRouter.delete(
+  "/:id",
+  authMiddleware,
+  requireRole([ROLES.ADMIN]),
+  deleteClient,
+);
 
 export default clientsRouter;

@@ -2,13 +2,13 @@ import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
 import { serenadeBookings, clients, events } from "../db/schema";
-import type { ApiResponse } from "../types/common";
 import type {
   SerenadeBooking,
   SerenadeBookingsGetResponse,
 } from "../types/serenade-booking";
 import { createTestUser, loginTestUser, seedTestMember } from "../utils/test";
 import type { Member } from "../types/member";
+import type { ErrorResponse } from "../types/error";
 
 describe("Serenade Bookings Router", () => {
   let token: string;
@@ -61,7 +61,7 @@ describe("Serenade Bookings Router", () => {
       .insert(events)
       .values({
         name: "Test Event",
-        date: new Date().toISOString(),
+        date: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
         location: "Test Location",
         type: "serenata",
       })
@@ -90,13 +90,54 @@ describe("Serenade Bookings Router", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as ApiResponse<SerenadeBooking>;
-    expect(body.success).toBe(true);
-    expect(body.data).toHaveProperty("id");
-    if (body.data) {
-      expect(body.data.price).toBe(newBooking.price);
-      createdSerenadeBookingId = body.data.id;
-    }
+    const body = (await res.json()) as SerenadeBooking;
+    expect(body).toHaveProperty("id");
+    expect(body.price).toBe(newBooking.price);
+    createdSerenadeBookingId = body.id;
+  });
+
+  it("POST /serenade-bookings - should reject negative price", async () => {
+    const badBooking = {
+      eventId: eventId,
+      clientId: clientId,
+      price: -1000,
+      occasion: "cumpleanos",
+    };
+
+    const res = await app.request("/serenade-bookings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(badBooking),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ErrorResponse;
+    expect(body.error.details?.price?.[0]).toContain("non-negative");
+  });
+
+  it("POST /serenade-bookings - should reject duplicate eventId", async () => {
+    const duplicateBooking = {
+      eventId: eventId,
+      clientId: clientId,
+      price: 200000,
+      occasion: "matrimonio",
+    };
+
+    const res = await app.request("/serenade-bookings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(duplicateBooking),
+    });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ErrorResponse;
+    expect(body.error.message).toContain("already exists");
   });
 
   it("GET /serenade-bookings - should return a list of serenade bookings", async () => {
@@ -106,12 +147,9 @@ describe("Serenade Bookings Router", () => {
       },
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<SerenadeBookingsGetResponse>;
-    expect(body.success).toBe(true);
-    if (body.data) {
-      expect(Array.isArray(body.data.items)).toBe(true);
-      expect(body.data.count).toBeGreaterThan(0);
-    }
+    const body = (await res.json()) as SerenadeBookingsGetResponse;
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.count).toBeGreaterThan(0);
   });
 
   it("GET /serenade-bookings/:id - should return a specific serenade booking", async () => {
@@ -124,11 +162,8 @@ describe("Serenade Bookings Router", () => {
       },
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<SerenadeBooking>;
-    expect(body.success).toBe(true);
-    if (body.data) {
-      expect(body.data.id).toBe(createdSerenadeBookingId);
-    }
+    const body = (await res.json()) as SerenadeBooking;
+    expect(body.id).toBe(createdSerenadeBookingId);
   });
 
   it("PATCH /serenade-bookings/:id - should update serenade booking details", async () => {
@@ -150,12 +185,27 @@ describe("Serenade Bookings Router", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<SerenadeBooking>;
-    expect(body.success).toBe(true);
-    if (body.data) {
-      expect(body.data.price).toBe(updateData.price);
-      expect(body.data.occasionDetails).toBe(updateData.occasionDetails);
-    }
+    const body = (await res.json()) as SerenadeBooking;
+    expect(body.price).toBe(updateData.price);
+    expect(body.occasionDetails).toBe(updateData.occasionDetails);
+  });
+
+  it("PATCH /serenade-bookings/:id - should reject empty update payload", async () => {
+    const res = await app.request(
+      `/serenade-bookings/${createdSerenadeBookingId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      },
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ErrorResponse;
+    expect(body.error.message).toContain("No fields provided");
   });
 
   it("DELETE /serenade-bookings/:id - should delete a serenade booking", async () => {
@@ -170,8 +220,8 @@ describe("Serenade Bookings Router", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiResponse<SerenadeBooking>;
-    expect(body.success).toBe(true);
+    const body = (await res.json()) as SerenadeBooking;
+    expect(body.id).toBe(createdSerenadeBookingId);
 
     // Verify deletion
     const checkRes = await app.request(

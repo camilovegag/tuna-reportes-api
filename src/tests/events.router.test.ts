@@ -111,17 +111,168 @@ describe("POST /events", () => {
     ],
   });
 
-  it.todo("should validate that date is not in the past");
-  it.todo("should validate the minimum lengths for name and location");
-  it.todo("should create events only if the user is authenticated");
-  it.todo("should create events only if the user has an editor or admin role");
-  it.todo("should not allow setting the id manually in the request body");
-  it.todo(
-    "should ignore tampering with created_at, created_by, updated_at or updated_by as these are set by the DB",
-  );
-  it.todo(
-    "should only allow one event with the same name and date (no duplicates)",
-  );
+  it("should validate the minimum lengths for name and location", async () => {
+    const shortName = {
+      ...defaultEventData,
+      name: "AB", // Too short
+    };
+
+    const res1 = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(shortName),
+    });
+
+    expect(res1.status).toBe(400);
+    const body1 = (await res1.json()) as ErrorResponse;
+    expect(body1.error.details?.name?.[0]).toContain("at least 3 characters");
+
+    const shortLocation = {
+      ...defaultEventData,
+      location: "XY", // Too short
+    };
+
+    const res2 = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(shortLocation),
+    });
+
+    expect(res2.status).toBe(400);
+    const body2 = (await res2.json()) as ErrorResponse;
+    expect(body2.error.details?.location?.[0]).toContain(
+      "at least 3 characters",
+    );
+  });
+
+  it("should create events only if the user is authenticated", async () => {
+    const res = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // No Authorization header
+      },
+      body: JSON.stringify(defaultEventData),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("should create events only if the user has an editor or admin role", async () => {
+    // Create viewer user
+    const viewerMember = await seedTestMember();
+    await createTestUser(
+      { email: "viewer@test.com" },
+      viewerMember.vinculationCode,
+      "viewer",
+    );
+    const viewerAuth = await loginTestUser("viewer@test.com", "password");
+
+    if (!("token" in viewerAuth.data)) {
+      throw new Error("Failed to get viewer token");
+    }
+
+    const res = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${viewerAuth.data.token}`,
+      },
+      body: JSON.stringify(defaultEventData),
+    });
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as ErrorResponse;
+    expect(body.error.code).toBe(ERROR_CODES.FORBIDDEN);
+  });
+
+  it("should not allow setting the id manually in the request body", async () => {
+    const withId = {
+      ...defaultEventData,
+      id: "12345678-1234-1234-1234-123456789012",
+    };
+
+    const res = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(withId),
+    });
+
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as EventPostResponse;
+
+    // ID should NOT match the one we sent
+    expect(created.id).not.toBe(withId.id);
+  });
+
+  it("should ignore tampering with created_at, created_by, updated_at or updated_by as these are set by the DB", async () => {
+    const tamperedEvent = {
+      ...defaultEventData,
+      createdAt: "2020-01-01T00:00:00.000Z",
+      createdBy: "fake-user-id",
+      updatedAt: "2020-01-01T00:00:00.000Z",
+      updatedBy: "another-fake-id",
+    };
+
+    const res = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(tamperedEvent),
+    });
+
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as EventPostResponse;
+
+    // Fetch the created event to check system fields
+    const fetchRes = await app.request(`/events/${created.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const event = (await fetchRes.json()) as Event;
+
+    // createdAt should be recent, not the tampered value
+    const createdDate = new Date(event.createdAt!);
+    expect(createdDate.getFullYear()).toBe(new Date().getFullYear());
+    expect(event.createdAt).not.toBe(tamperedEvent.createdAt);
+  });
+
+  it("should only allow one event with the same name and date (no duplicates)", async () => {
+    // Create first event
+    await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(defaultEventData),
+    });
+
+    // Try to create duplicate
+    const res = await app.request("/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(defaultEventData),
+    });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ErrorResponse;
+    expect(body.error.code).toBe(ERROR_CODES.CONFLICT);
+    expect(body.error.message).toContain("already exists");
+  });
 });
 
 describe("GET /events", () => {

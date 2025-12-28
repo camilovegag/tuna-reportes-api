@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
@@ -98,6 +98,27 @@ export async function createEventController(c: Context) {
   const user = c.get("user") as AuthUserPayload;
 
   try {
+    // Check for duplicate event (same name and date)
+    const existing = await db
+      .select()
+      .from(dbSchema.events)
+      .where(
+        and(
+          eq(dbSchema.events.name, result.data.name),
+          eq(dbSchema.events.date, result.data.date),
+        ),
+      );
+
+    if (existing.length > 0) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "An event with this name and date already exists",
+          code: ERROR_CODES.CONFLICT,
+        },
+      };
+      return c.json(errorResponse, 409);
+    }
+
     const insertData = {
       ...result.data,
       createdBy: user.userId,
