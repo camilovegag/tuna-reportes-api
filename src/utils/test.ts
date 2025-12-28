@@ -72,13 +72,16 @@ export async function createTestUser(
     | AuthRegisterPostResponse
     | ErrorResponse;
 
-  // Update role after registration since register endpoint doesn't accept role
-  if ("id" in data) {
-    await db
-      .update(dbSchema.users)
-      .set({ role })
-      .where(eq(dbSchema.users.id, data.id));
+  // Throw error if registration failed
+  if (!("id" in data)) {
+    throw new Error("Registration failed: " + JSON.stringify(data));
   }
+
+  // Update role after registration since register endpoint doesn't accept role
+  await db
+    .update(dbSchema.users)
+    .set({ role })
+    .where(eq(dbSchema.users.id, data.id));
 
   return { response, data, user: defaultUser };
 }

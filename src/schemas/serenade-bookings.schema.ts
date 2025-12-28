@@ -10,7 +10,7 @@ export const serenadeBookingInsertSchema = createInsertSchema(serenadeBookings)
     createdAt: true,
     updatedAt: true,
   })
-  .refine((data) => data.price >= 0, {
+  .refine((data) => data.price === undefined || data.price >= 0, {
     message: "Price must be non-negative",
     path: ["price"],
   })

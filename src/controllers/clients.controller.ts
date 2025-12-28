@@ -237,8 +237,13 @@ export const deleteClient = async (c: Context): Promise<Response> => {
     }
 
     return c.json(result[0], 200);
-  } catch (error: any) {
-    if (error.code === "23503") {
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23503"
+    ) {
       const errorResponse: ErrorResponse = {
         error: {
           message:

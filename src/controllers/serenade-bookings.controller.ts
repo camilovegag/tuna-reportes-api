@@ -122,9 +122,14 @@ export const createSerenadeBooking = async (c: Context): Promise<Response> => {
     }
 
     return c.json(result[0], 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Foreign key constraint violation
-    if (error.code === "23503") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23503"
+    ) {
       const errorResponse: ErrorResponse = {
         error: {
           message: "Client or Event not found",
@@ -135,7 +140,12 @@ export const createSerenadeBooking = async (c: Context): Promise<Response> => {
     }
 
     // Unique constraint violation (duplicate eventId)
-    if (error.code === "23505") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23505"
+    ) {
       const errorResponse: ErrorResponse = {
         error: {
           message: "A serenade booking already exists for this event",
@@ -225,9 +235,14 @@ export const updateSerenadeBooking = async (c: Context): Promise<Response> => {
     }
 
     return c.json(result[0], 200);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Unique constraint violation when updating eventId
-    if (error.code === "23505") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23505"
+    ) {
       const errorResponse: ErrorResponse = {
         error: {
           message: "A serenade booking already exists for this event",
