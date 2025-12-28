@@ -17,7 +17,7 @@ export const eventInsertSchema = createInsertSchema(dbSchema.events)
   .extend({
     name: z.string().min(3, "Name must be at least 3 characters"),
     location: z.string().min(3, "Location must be at least 3 characters"),
-    // Date validation removed to allow historical events (for migration)
+    // Intentionally no additional date validation here to allow historical events (e.g., during migration)
   });
 
 export const eventSelectSchema = createSelectSchema(dbSchema.events);
