@@ -2,6 +2,10 @@ import { db } from "../db";
 import { sql } from "drizzle-orm";
 
 async function clean() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("❌ Refusing to clean database in production environment!");
+    process.exit(1);
+  }
   console.log("🧹 Cleaning database...");
 
   // Truncate all tables with CASCADE to handle foreign keys

@@ -63,12 +63,7 @@ async function seed() {
       email: "admin@tuna.com",
       memberId: adminMember[0].id,
       role: "admin",
-      // This is a bcrypt hash for "password" (cost 10)
-      passwordHash:
-        "$2b$10$w/X/..//..//..//..//..//..//..//..//..//..//..//..//..//..",
-      // WAIT, generating a real hash is better.
-      // Let's just create them and if login fails, user can use the test utils.
-      // For now, we populate data.
+      passwordHash,
     });
   }
 
@@ -79,7 +74,7 @@ async function seed() {
     .values(
       Array.from({ length: 5 }).map(() => ({
         name: faker.company.name(),
-        phone: faker.phone.number().slice(0, 20),
+        phone: faker.phone.number({ style: "human" }).slice(0, 20),
         email: faker.internet.email(),
         notes: faker.lorem.sentence(),
       })),
@@ -101,7 +96,10 @@ async function seed() {
           "festival",
           "serenata",
           "parche",
-        ]) as any,
+          "certamen",
+          "remate",
+          "viaje",
+        ]),
         status: "confirmado" as any,
         isInternational: faker.datatype.boolean(),
         // createdBy: ... (optional)
@@ -124,6 +122,10 @@ async function seed() {
         occasion: faker.helpers.arrayElement([
           "cumpleanos",
           "matrimonio",
+          "grado",
+          "quince_anos",
+          "aniversario",
+          "despedida",
           "otro",
         ]) as any,
         occasionDetails: faker.lorem.sentence(),
@@ -145,6 +147,7 @@ async function seed() {
             "asiste",
             "no_asiste",
             "por_confirmar",
+            "no_responde",
           ]) as any,
         });
       }
