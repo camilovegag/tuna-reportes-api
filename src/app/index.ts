@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import attendancesRouter from "../routers/attendances.router";
 import authRouter from "../routers/auth.router";
+import clientsRouter from "../routers/clients.router";
 import eventsRouter from "../routers/events.router";
 import membersRouter from "../routers/members.router";
 import pingRouter from "../routers/ping.router";
-import attendancesRouter from "../routers/attendances.router";
-import usersRouter from "../routers/users.router";
-import clientsRouter from "../routers/clients.router";
 import serenadeBookingsRouter from "../routers/serenade-bookings.router";
+import usersRouter from "../routers/users.router";
 
 const app = new Hono();
 

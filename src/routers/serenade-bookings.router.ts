@@ -1,14 +1,14 @@
+import { Hono } from "hono";
+import {
+  createSerenadeBooking,
+  deleteSerenadeBooking,
+  getSerenadeBookingById,
+  getSerenadeBookings,
+  updateSerenadeBooking,
+} from "../controllers/serenade-bookings.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { ROLES } from "../types/roles";
-import { Hono } from "hono";
-import {
-  getSerenadeBookings,
-  getSerenadeBookingById,
-  createSerenadeBooking,
-  updateSerenadeBooking,
-  deleteSerenadeBooking,
-} from "../controllers/serenade-bookings.controller";
 
 const serenadeBookingsRouter = new Hono();
 

@@ -1,19 +1,19 @@
+import { eq } from "drizzle-orm";
 import type { Context } from "hono";
+import { z } from "zod/v4";
+import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
+import {
+  memberInsertSchema,
+  memberUpdateSchema,
+} from "../schemas/members.schema";
+import type { ErrorResponse } from "../types/error";
 import type {
   MemberDeleteResponse,
   MemberPatchResponse,
   MemberPostResponse,
   MembersGetResponse,
 } from "../types/member";
-import type { ErrorResponse } from "../types/error";
-import { ERROR_CODES } from "../constants/error-codes";
-import { eq } from "drizzle-orm";
-import {
-  memberInsertSchema,
-  memberUpdateSchema,
-} from "../schemas/members.schema";
-import { z } from "zod/v4";
 
 export async function getMembersForRegistrationController(c: Context) {
   try {

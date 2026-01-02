@@ -1,14 +1,14 @@
+import { Hono } from "hono";
+import {
+  createClient,
+  deleteClient,
+  getClientById,
+  getClients,
+  updateClient,
+} from "../controllers/clients.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { ROLES } from "../types/roles";
-import { Hono } from "hono";
-import {
-  getClients,
-  getClientById,
-  createClient,
-  updateClient,
-  deleteClient,
-} from "../controllers/clients.controller";
 
 const clientsRouter = new Hono();
 

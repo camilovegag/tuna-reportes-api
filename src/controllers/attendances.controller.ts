@@ -8,13 +8,13 @@ import {
   attendanceSelectSchema,
   attendanceUpdateSchema,
 } from "../schemas/attendances.schema";
-import type { AuthUserPayload } from "../types/auth";
 import type {
   AttendanceDeleteResponse,
   AttendancePostResponse,
   AttendancesGetResponse,
   AttendanceUpdateResponse,
 } from "../types/attendance";
+import type { AuthUserPayload } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
 
 export async function getAttendancesController(c: Context) {

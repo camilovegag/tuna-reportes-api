@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
-import type { AuthLoginPostResponse } from "../types/auth";
 import type {
-  Attendance,
   AttendanceDeleteResponse,
   AttendancePostResponse,
   AttendancesGetResponse,
   AttendanceUpdateResponse,
 } from "../types/attendance";
+import type { AuthLoginPostResponse } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
 import {
   createTestEvent,

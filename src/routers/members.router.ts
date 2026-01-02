@@ -1,7 +1,4 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
 import {
   deleteMemberController,
   getMemberController,
@@ -10,6 +7,9 @@ import {
   patchMemberController,
   postMemberController,
 } from "../controllers/members.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireRole } from "../middlewares/role.middleware";
+import { ROLES } from "../types/roles";
 
 const membersRouter = new Hono();
 

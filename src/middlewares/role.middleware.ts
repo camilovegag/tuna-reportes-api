@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
+import { ERROR_CODES } from "../constants/error-codes";
 import type { AuthUserPayload } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
-import { ERROR_CODES } from "../constants/error-codes";
 
 /**
  * Middleware to enforce role-based access control.

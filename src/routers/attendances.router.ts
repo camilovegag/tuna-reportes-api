@@ -1,7 +1,4 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
 import {
   createAttendanceController,
   deleteAttendanceController,
@@ -9,6 +6,9 @@ import {
   getAttendancesController,
   updateAttendanceController,
 } from "../controllers/attendances.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireRole } from "../middlewares/role.middleware";
+import { ROLES } from "../types/roles";
 
 const attendancesRouter = new Hono();
 
