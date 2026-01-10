@@ -437,3 +437,208 @@ describe("PATCH /events/:id", () => {
     // it("should respond with 400 Bad Request and an error message");
   });
 });
+
+describe("GET /events with filters", () => {
+  beforeEach(async () => {
+    // Create events with different statuses and types for testing
+    await createTestEvent(
+      {
+        name: "Serenata Confirmada",
+        type: "serenata",
+        status: "confirmado",
+        date: "2026-03-15T20:00:00.000Z",
+      },
+      token,
+    );
+    await createTestEvent(
+      {
+        name: "Ensayo Por Confirmar",
+        type: "ensayo",
+        status: "por_confirmar",
+        date: "2026-03-20T18:00:00.000Z",
+      },
+      token,
+    );
+    await createTestEvent(
+      {
+        name: "Festival Realizado",
+        type: "festival",
+        status: "realizado",
+        date: "2026-01-10T12:00:00.000Z",
+      },
+      token,
+    );
+    await createTestEvent(
+      {
+        name: "Serenata Cancelada",
+        type: "serenata",
+        status: "cancelado",
+        date: "2026-02-14T21:00:00.000Z",
+      },
+      token,
+    );
+  });
+
+  describe("when filtering by status", () => {
+    it("should return only events with the specified status", async () => {
+      const res = await app.request("/events?status=confirmado", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(data.events.every((e) => e.status === "confirmado")).toBe(true);
+      expect(data.count).toBe(1);
+    });
+
+    it("should support comma-separated status values", async () => {
+      const res = await app.request("/events?status=confirmado,por_confirmar", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(
+        data.events.every((e) =>
+          ["confirmado", "por_confirmar"].includes(e.status),
+        ),
+      ).toBe(true);
+      expect(data.count).toBe(2);
+    });
+
+    it("should ignore invalid status values", async () => {
+      const res = await app.request("/events?status=invalid_status", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      // Invalid status is ignored, returns all events
+      expect(data.count).toBe(4);
+    });
+  });
+
+  describe("when filtering by type", () => {
+    it("should return only events with the specified type", async () => {
+      const res = await app.request("/events?type=serenata", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(data.events.every((e) => e.type === "serenata")).toBe(true);
+      expect(data.count).toBe(2);
+    });
+
+    it("should support comma-separated type values", async () => {
+      const res = await app.request("/events?type=serenata,ensayo", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(
+        data.events.every((e) => ["serenata", "ensayo"].includes(e.type)),
+      ).toBe(true);
+      expect(data.count).toBe(3);
+    });
+  });
+
+  describe("when filtering by date range", () => {
+    it("should return events from a specific date", async () => {
+      const res = await app.request("/events?from=2026-03-01", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(
+        data.events.every((e) => new Date(e.date) >= new Date("2026-03-01")),
+      ).toBe(true);
+      expect(data.count).toBe(2);
+    });
+
+    it("should return events until a specific date", async () => {
+      const res = await app.request("/events?to=2026-02-28", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(
+        data.events.every(
+          (e) => new Date(e.date) <= new Date("2026-02-28T23:59:59.999Z"),
+        ),
+      ).toBe(true);
+      expect(data.count).toBe(2);
+    });
+
+    it("should return events within a date range", async () => {
+      const res = await app.request("/events?from=2026-02-01&to=2026-03-31", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(data.count).toBe(3);
+    });
+  });
+
+  describe("when using pagination", () => {
+    it("should limit the number of results", async () => {
+      const res = await app.request("/events?limit=2", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(data.count).toBe(2);
+      expect(data.total).toBe(4);
+      expect(data.limit).toBe(2);
+    });
+
+    it("should skip results with offset", async () => {
+      const res = await app.request("/events?limit=2&offset=2", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(data.count).toBe(2);
+      expect(data.offset).toBe(2);
+    });
+
+    it("should return total count regardless of pagination", async () => {
+      const res = await app.request("/events?limit=1&offset=0", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(data.count).toBe(1);
+      expect(data.total).toBe(4);
+    });
+  });
+
+  describe("when combining filters", () => {
+    it("should apply multiple filters together", async () => {
+      const res = await app.request(
+        "/events?status=confirmado,por_confirmar&type=serenata",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = (await res.json()) as EventsGetResponse;
+
+      expect(res.status).toBe(200);
+      expect(
+        data.events.every(
+          (e) =>
+            ["confirmado", "por_confirmar"].includes(e.status) &&
+            e.type === "serenata",
+        ),
+      ).toBe(true);
+      expect(data.count).toBe(1);
+    });
+  });
+});

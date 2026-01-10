@@ -1,8 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, SQL } from "drizzle-orm";
 import type { Context } from "hono";
-import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
+import { eventStatus, eventType } from "../db/schema";
 import {
   eventInsertSchema,
   eventSelectSchema,
@@ -14,8 +14,73 @@ import type { AuthUserPayload } from "../types/auth";
 
 export async function getEventsController(c: Context) {
   try {
-    const events = await db.select().from(dbSchema.events);
-    const response: EventsGetResponse = { events, count: events.length };
+    // Extract query params
+    const statusParam = c.req.query("status");
+    const typeParam = c.req.query("type");
+    const fromParam = c.req.query("from");
+    const toParam = c.req.query("to");
+    const limitParam = c.req.query("limit");
+    const offsetParam = c.req.query("offset");
+
+    // Build conditions array
+    const conditions: SQL[] = [];
+
+    // Filter by status (comma-separated)
+    if (statusParam) {
+      const statuses = statusParam
+        .split(",")
+        .filter((s) => eventStatus.enumValues.includes(s as any));
+      if (statuses.length > 0) {
+        conditions.push(inArray(dbSchema.events.status, statuses as any[]));
+      }
+    }
+
+    // Filter by type (comma-separated)
+    if (typeParam) {
+      const types = typeParam
+        .split(",")
+        .filter((t) => eventType.enumValues.includes(t as any));
+      if (types.length > 0) {
+        conditions.push(inArray(dbSchema.events.type, types as any[]));
+      }
+    }
+
+    // Filter by date range
+    if (fromParam) {
+      conditions.push(gte(dbSchema.events.date, fromParam));
+    }
+    if (toParam) {
+      // Add end of day to include the entire "to" date
+      conditions.push(lte(dbSchema.events.date, `${toParam}T23:59:59.999Z`));
+    }
+
+    // Parse pagination
+    const limit = limitParam
+      ? Math.min(parseInt(limitParam, 10) || 50, 100)
+      : 50;
+    const offset = offsetParam ? parseInt(offsetParam, 10) || 0 : 0;
+
+    // Build and execute query
+    let query = db.select().from(dbSchema.events);
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    // Get total count (before pagination)
+    const allFiltered = await query;
+    const total = allFiltered.length;
+
+    // Apply pagination
+    const events = allFiltered.slice(offset, offset + limit);
+
+    const response: EventsGetResponse = {
+      events,
+      count: events.length,
+      total,
+      limit,
+      offset,
+    };
     return c.json(response, 200);
   } catch (error) {
     const errorResponse: ErrorResponse = {
