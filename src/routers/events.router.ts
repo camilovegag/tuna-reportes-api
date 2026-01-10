@@ -13,29 +13,21 @@ import { eventInsertSchema, eventUpdateSchema } from "../schemas/events.schema";
 import { validatorErrorHandler } from "../utils/validator";
 
 const eventsRouter = new Hono()
-  .get("/:id", authMiddleware, async (c) => {
-    return getEventController(c);
-  })
-  .get("/", authMiddleware, async (c) => {
-    return getEventsController(c);
-  })
+  .get("/:id", authMiddleware, getEventController)
+  .get("/", authMiddleware, getEventsController)
   .post(
     "/",
     authMiddleware,
     requireRole([ROLES.ADMIN, ROLES.EDITOR]),
     zValidator("json", eventInsertSchema, validatorErrorHandler),
-    async (c) => {
-      return createEventController(c);
-    },
+    createEventController,
   )
   .patch(
     "/:id",
     authMiddleware,
     requireRole([ROLES.ADMIN, ROLES.EDITOR]),
     zValidator("json", eventUpdateSchema, validatorErrorHandler),
-    async (c) => {
-      return updateEventController(c);
-    },
+    updateEventController,
   );
 
 export default eventsRouter;

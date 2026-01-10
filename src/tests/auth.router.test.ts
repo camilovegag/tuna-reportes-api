@@ -135,7 +135,7 @@ describe("POST /auth/register", () => {
     });
 
     it("should return an error message", () => {
-      expect(data.error.message).toBe("Vinculation code does not exists");
+      expect(data.error.message).toBe("Vinculation code does not exist");
     });
   });
 
@@ -161,7 +161,8 @@ describe("POST /auth/register", () => {
     });
 
     it("should return an error message", () => {
-      expect(data.error.message).toBe("Email is already registered");
+      // Member is already linked, so this error comes before email check
+      expect(data.error.message).toBe("Member is already linked to a user");
     });
   });
 });

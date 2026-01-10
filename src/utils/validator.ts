@@ -12,17 +12,19 @@ import type { ErrorResponse } from "../types/error";
  * @returns JSON error response if validation failed
  */
 export const validatorErrorHandler = (result: any, c: any) => {
-  if (!result.success) {
+  if (!result.success && result.error) {
     // Format Zod errors into our custom format: { field: [errors] }
     const fieldErrors: Record<string, string[]> = {};
 
-    result.error.issues.forEach((issue: any) => {
-      const field = issue.path.join(".") || "general";
-      if (!fieldErrors[field]) {
-        fieldErrors[field] = [];
-      }
-      fieldErrors[field].push(issue.message);
-    });
+    if (result.error.issues) {
+      result.error.issues.forEach((issue: any) => {
+        const field = issue.path.join(".") || "general";
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = [];
+        }
+        fieldErrors[field].push(issue.message);
+      });
+    }
 
     const errorResponse: ErrorResponse = {
       error: {

@@ -26,8 +26,24 @@ export async function registerHandler(c: Context) {
     if (!member) {
       const errorResponse: ErrorResponse = {
         error: {
-          message: "Vinculation code does not exists",
+          message: "Vinculation code does not exist",
           code: ERROR_CODES.VALIDATION,
+        },
+      };
+      return c.json(errorResponse, 400);
+    }
+
+    // Check if member is already linked to a user
+    const [existingMemberUser] = await db
+      .select()
+      .from(dbSchema.users)
+      .where(eq(dbSchema.users.memberId, member.id));
+
+    if (existingMemberUser) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          message: "Member is already linked to a user",
+          code: ERROR_CODES.CONFLICT,
         },
       };
       return c.json(errorResponse, 400);
