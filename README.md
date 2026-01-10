@@ -223,6 +223,22 @@ GET /members
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
+### ⏰ Expiración del Token
+
+Los tokens JWT tienen una duración de **7 días** (604,800 segundos). Después de este tiempo, el usuario deberá volver a autenticarse.
+
+```json
+{
+  "exp": 1234567890 // Unix timestamp de expiración
+}
+```
+
+**Razones de seguridad:**
+
+- Balance entre seguridad y experiencia de usuario
+- Apropiado para sistema de gestión organizacional
+- Usuarios pueden trabajar durante una semana sin re-autenticación
+
 ---
 
 ## 🗄️ Base de Datos

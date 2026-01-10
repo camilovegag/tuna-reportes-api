@@ -3,7 +3,11 @@ import type { Context } from "hono";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
-import { attendanceSelectSchema } from "../schemas/attendances.schema";
+import {
+  attendanceInsertSchema,
+  attendanceSelectSchema,
+  attendanceUpdateSchema,
+} from "../schemas/attendances.schema";
 import type { AuthUserPayload } from "../types/auth";
 import type {
   AttendanceDeleteResponse,
@@ -100,8 +104,9 @@ export async function getAttendanceController(c: Context) {
 }
 
 export async function createAttendanceController(c: Context) {
-  // Data is already validated by zValidator middleware in the router
-  const data = await c.req.json();
+  // zValidator already validated, but we parse again to filter unwanted fields
+  const body = await c.req.json();
+  const data = attendanceInsertSchema.parse(body);
   const user = c.get("user") as AuthUserPayload;
 
   try {
@@ -166,8 +171,9 @@ export async function createAttendanceController(c: Context) {
 export async function updateAttendanceController(c: Context) {
   const id = c.req.param("id");
   const idResult = attendanceSelectSchema.shape.id.safeParse(id);
-  // Data is already validated by zValidator middleware
-  const data = await c.req.json();
+  // zValidator already validated, but we parse again to filter unwanted fields
+  const body = await c.req.json();
+  const data = attendanceUpdateSchema.parse(body);
 
   if (!idResult.success) {
     const errorResponse: ErrorResponse = {
