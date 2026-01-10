@@ -104,12 +104,11 @@ export async function getAttendanceController(c: Context) {
 }
 
 export async function createAttendanceController(c: Context) {
-  // zValidator already validated, but we parse again to filter unwanted fields
-  const body = await c.req.json();
-  const data = attendanceInsertSchema.parse(body);
-  const user = c.get("user") as AuthUserPayload;
-
   try {
+    const body = await c.req.json();
+    const data = attendanceInsertSchema.parse(body);
+    const user = c.get("user") as AuthUserPayload;
+
     // Check if attendance already exists for this event + member
     const [existing] = await db
       .select()

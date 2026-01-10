@@ -11,9 +11,9 @@ import type {
 } from "../types/auth";
 
 export async function registerHandler(c: Context) {
-  // Data is already validated by zValidator in router
   // Parse to ensure proper typing and field filtering
   const body = await c.req.json();
+  // Data is already validated by zValidator in router
   const data = registerSchema.parse(body);
 
   try {
@@ -27,7 +27,7 @@ export async function registerHandler(c: Context) {
       const errorResponse: ErrorResponse = {
         error: {
           message: "Vinculation code does not exist",
-          code: ERROR_CODES.VALIDATION,
+          code: ERROR_CODES.NOT_FOUND,
         },
       };
       return c.json(errorResponse, 400);

@@ -21,7 +21,7 @@ async function seed() {
         fullName: faker.person.fullName(),
         nickname: faker.person.firstName(), // Simple nickname
         birthDate: faker.date.birthdate().toISOString().split("T")[0]!,
-        rank: faker.helpers.arrayElement(["aspirante", "tuno", "bulto"]) as any,
+        rank: faker.helpers.arrayElement(["aspirante", "tuno", "bulto"]),
         email: faker.internet.email(),
         phone: faker.phone.number(),
         documentNumber: faker.string.numeric(10),
@@ -39,8 +39,8 @@ async function seed() {
     createdMembers.map((member) => ({
       email: member.email || faker.internet.email(),
       memberId: member.id,
-      role: faker.helpers.arrayElement(["editor", "viewer", "admin"]) as any,
-      provider: "local" as any,
+      role: faker.helpers.arrayElement(["editor", "viewer", "admin"]),
+      provider: "local" as "local",
       passwordHash,
     })),
   );
@@ -100,7 +100,7 @@ async function seed() {
           "remate",
           "viaje",
         ]),
-        status: "confirmado" as any,
+        status: "confirmado" as "confirmado",
         isInternational: faker.datatype.boolean(),
         // createdBy: ... (optional)
       })),
@@ -127,7 +127,7 @@ async function seed() {
           "aniversario",
           "despedida",
           "otro",
-        ]) as any,
+        ]),
         occasionDetails: faker.lorem.sentence(),
       })),
     );
@@ -148,7 +148,7 @@ async function seed() {
             "no_asiste",
             "por_confirmar",
             "no_responde",
-          ]) as any,
+          ]),
         });
       }
     }

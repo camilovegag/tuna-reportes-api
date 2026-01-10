@@ -1,5 +1,6 @@
 import { ERROR_CODES } from "../constants/error-codes";
 import type { ErrorResponse } from "../types/error";
+import type { ZodIssue } from "zod";
 
 /**
  * Custom error handler for @hono/zod-validator to match our API error format
@@ -17,7 +18,7 @@ export const validatorErrorHandler = (result: any, c: any) => {
     const fieldErrors: Record<string, string[]> = {};
 
     if (result.error.issues) {
-      result.error.issues.forEach((issue: any) => {
+      result.error.issues.forEach((issue: ZodIssue) => {
         const field = issue.path.join(".") || "general";
         if (!fieldErrors[field]) {
           fieldErrors[field] = [];
