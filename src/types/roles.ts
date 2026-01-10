@@ -3,11 +3,11 @@ import { dbSchema } from "../db";
 // Extract role values directly from the schema enum (single source of truth)
 export const USER_ROLES = dbSchema.userRole.enumValues; // ["admin", "editor", "viewer"]
 
-// Explicitly map named roles without relying on enum ordering
+// Explicitly map named roles - directly use the string values for type safety
 export const ROLES = {
-  ADMIN: USER_ROLES[USER_ROLES.indexOf("admin")],
-  EDITOR: USER_ROLES[USER_ROLES.indexOf("editor")],
-  VIEWER: USER_ROLES[USER_ROLES.indexOf("viewer")],
+  ADMIN: "admin",
+  EDITOR: "editor",
+  VIEWER: "viewer",
 } as const;
 
 // Type inferred from the enum

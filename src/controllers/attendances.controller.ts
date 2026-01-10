@@ -3,11 +3,7 @@ import type { Context } from "hono";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
-import {
-  attendanceInsertSchema,
-  attendanceSelectSchema,
-  attendanceUpdateSchema,
-} from "../schemas/attendances.schema";
+import { attendanceSelectSchema } from "../schemas/attendances.schema";
 import type { AuthUserPayload } from "../types/auth";
 import type {
   AttendanceDeleteResponse,
@@ -104,28 +100,8 @@ export async function getAttendanceController(c: Context) {
 }
 
 export async function createAttendanceController(c: Context) {
-  const body = await c.req.json();
-  const result = attendanceInsertSchema.safeParse(body);
-
-  if (!result.success) {
-    const tree = z.treeifyError(result.error);
-    const flatErrors = Object.fromEntries(
-      Object.entries(tree.properties ?? {}).map(([key, value]) => [
-        key,
-        value.errors,
-      ]),
-    );
-
-    const errorResponse: ErrorResponse = {
-      error: {
-        message: "Validation failed",
-        details: flatErrors,
-        code: ERROR_CODES.VALIDATION,
-      },
-    };
-    return c.json(errorResponse, 400);
-  }
-
+  // Data is already validated by zValidator middleware in the router
+  const data = await c.req.json();
   const user = c.get("user") as AuthUserPayload;
 
   try {
@@ -135,8 +111,8 @@ export async function createAttendanceController(c: Context) {
       .from(dbSchema.attendances)
       .where(
         and(
-          eq(dbSchema.attendances.eventId, result.data.eventId),
-          eq(dbSchema.attendances.memberId, result.data.memberId),
+          eq(dbSchema.attendances.eventId, data.eventId),
+          eq(dbSchema.attendances.memberId, data.memberId),
         ),
       );
 
@@ -151,7 +127,7 @@ export async function createAttendanceController(c: Context) {
     }
 
     const insertData = {
-      ...result.data,
+      ...data,
       updatedBy: user.userId,
     };
 
@@ -190,8 +166,8 @@ export async function createAttendanceController(c: Context) {
 export async function updateAttendanceController(c: Context) {
   const id = c.req.param("id");
   const idResult = attendanceSelectSchema.shape.id.safeParse(id);
-  const body = await c.req.json();
-  const result = attendanceUpdateSchema.safeParse(body);
+  // Data is already validated by zValidator middleware
+  const data = await c.req.json();
 
   if (!idResult.success) {
     const errorResponse: ErrorResponse = {
@@ -203,29 +179,11 @@ export async function updateAttendanceController(c: Context) {
     return c.json(errorResponse, 400);
   }
 
-  if (!result.success) {
-    const tree = z.treeifyError(result.error);
-    const flatErrors = Object.fromEntries(
-      Object.entries(tree.properties ?? {}).map(([key, value]) => [
-        key,
-        value.errors,
-      ]),
-    );
-    const errorResponse: ErrorResponse = {
-      error: {
-        message: "Validation failed",
-        details: flatErrors,
-        code: ERROR_CODES.VALIDATION,
-      },
-    };
-    return c.json(errorResponse, 400);
-  }
-
   const user = c.get("user") as AuthUserPayload;
 
   try {
     const updateData = {
-      ...result.data,
+      ...data,
       updatedAt: new Date().toISOString(),
       updatedBy: user.userId,
     };

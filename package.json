@@ -16,6 +16,7 @@
     "db:clean": "bun src/scripts/clean.ts"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
     "drizzle-zod": "^0.8.2",

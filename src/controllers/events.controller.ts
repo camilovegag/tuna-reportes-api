@@ -74,27 +74,7 @@ export async function getEventController(c: Context) {
 
 export async function createEventController(c: Context) {
   const body = await c.req.json();
-  const result = eventInsertSchema.safeParse(body);
-
-  if (!result.success) {
-    const tree = z.treeifyError(result.error);
-    const flatErrors = Object.fromEntries(
-      Object.entries(tree.properties ?? {}).map(([key, value]) => [
-        key,
-        value.errors,
-      ]),
-    );
-
-    const errorResponse: ErrorResponse = {
-      error: {
-        message: "Validation failed",
-        details: flatErrors,
-        code: ERROR_CODES.VALIDATION,
-      },
-    };
-    return c.json(errorResponse, 400);
-  }
-
+  const result = eventInsertSchema.parse(body); // Filter unwanted fields
   const user = c.get("user") as AuthUserPayload;
 
   try {
@@ -104,8 +84,8 @@ export async function createEventController(c: Context) {
       .from(dbSchema.events)
       .where(
         and(
-          eq(dbSchema.events.name, result.data.name),
-          eq(dbSchema.events.date, result.data.date),
+          eq(dbSchema.events.name, result.name),
+          eq(dbSchema.events.date, result.date),
         ),
       );
 
@@ -120,7 +100,7 @@ export async function createEventController(c: Context) {
     }
 
     const insertData = {
-      ...result.data,
+      ...result,
       createdBy: user.userId,
     };
 
@@ -159,8 +139,9 @@ export async function createEventController(c: Context) {
 export async function updateEventController(c: Context) {
   const id = c.req.param("id");
   const idResult = eventSelectSchema.shape.id.safeParse(id);
+  // zValidator already validated, but we parse again to filter unwanted fields
   const body = await c.req.json();
-  const result = eventUpdateSchema.safeParse(body);
+  const result = eventUpdateSchema.parse(body);
 
   if (!idResult.success) {
     const errorResponse: ErrorResponse = {
@@ -172,17 +153,7 @@ export async function updateEventController(c: Context) {
     return c.json(errorResponse, 400);
   }
 
-  if (!result.success) {
-    const errorResponse: ErrorResponse = {
-      error: {
-        message: "Validation error",
-        code: ERROR_CODES.VALIDATION,
-      },
-    };
-    return c.json(errorResponse, 400);
-  }
-
-  if (Object.keys(result.data).length === 0) {
+  if (Object.keys(result).length === 0) {
     return c.json(
       {
         error: {
@@ -198,7 +169,7 @@ export async function updateEventController(c: Context) {
 
   try {
     const updateData = {
-      ...result.data,
+      ...result,
       updatedAt: new Date().toISOString(),
       updatedBy: user.userId,
     };
