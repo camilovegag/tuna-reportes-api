@@ -130,8 +130,8 @@ describe("POST /auth/register", () => {
       data = result.data as ErrorResponse;
     });
 
-    it("should respond with 400 Bad Request", () => {
-      expect(response.status).toBe(400);
+    it("should respond with 404 Not Found", () => {
+      expect(response.status).toBe(404);
     });
 
     it("should return an error message", () => {
@@ -156,8 +156,8 @@ describe("POST /auth/register", () => {
       data = result.data as ErrorResponse;
     });
 
-    it("should respond with 400 Bad Request", () => {
-      expect(response.status).toBe(400);
+    it("should respond with 409 Conflict", () => {
+      expect(response.status).toBe(409);
     });
 
     it("should return an error message", () => {

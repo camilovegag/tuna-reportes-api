@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { sign } from "hono/jwt";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
-import { loginSchema, registerSchema } from "../schemas/auth.schema";
+import type { RegisterInput, LoginInput } from "../schemas/auth.schema";
 import type { ErrorResponse } from "../types/error";
 import type {
   AuthLoginPostResponse,
@@ -11,10 +11,8 @@ import type {
 } from "../types/auth";
 
 export async function registerHandler(c: Context) {
-  // Parse to ensure proper typing and field filtering
-  const body = await c.req.json();
-  // Data is already validated by zValidator in router
-  const data = registerSchema.parse(body);
+  // Data already validated by zValidator in router, just get with type
+  const data = (await c.req.json()) as RegisterInput;
 
   try {
     // Check if member exists with the vinculation code
@@ -30,7 +28,7 @@ export async function registerHandler(c: Context) {
           code: ERROR_CODES.NOT_FOUND,
         },
       };
-      return c.json(errorResponse, 400);
+      return c.json(errorResponse, 404);
     }
 
     // Check if member is already linked to a user
@@ -46,7 +44,7 @@ export async function registerHandler(c: Context) {
           code: ERROR_CODES.CONFLICT,
         },
       };
-      return c.json(errorResponse, 400);
+      return c.json(errorResponse, 409);
     }
 
     // Check if email is already registered
@@ -62,7 +60,7 @@ export async function registerHandler(c: Context) {
           code: ERROR_CODES.CONFLICT,
         },
       };
-      return c.json(errorResponse, 400);
+      return c.json(errorResponse, 409);
     }
 
     // Hash password
@@ -107,9 +105,8 @@ export async function registerHandler(c: Context) {
 }
 
 export async function loginHandler(c: Context) {
-  // Data is already validated by zValidator in router
-  const body = await c.req.json();
-  const data = loginSchema.parse(body);
+  // Data already validated by zValidator in router, just get with type
+  const data = (await c.req.json()) as LoginInput;
 
   try {
     // Find user by email

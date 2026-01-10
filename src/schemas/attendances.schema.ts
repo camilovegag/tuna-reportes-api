@@ -3,6 +3,7 @@ import {
   createSelectSchema,
   createUpdateSchema,
 } from "drizzle-zod";
+import { z } from "zod/v4";
 import { dbSchema } from "../db";
 
 export const attendanceInsertSchema = createInsertSchema(
@@ -19,3 +20,6 @@ export const attendanceUpdateSchema = createUpdateSchema(dbSchema.attendances)
     status: true,
   })
   .strict();
+
+export type AttendanceInsert = z.infer<typeof attendanceInsertSchema>;
+export type AttendanceUpdate = z.infer<typeof attendanceUpdateSchema>;

@@ -1,6 +1,19 @@
+import type { Context } from "hono";
 import { ERROR_CODES } from "../constants/error-codes";
 import type { ErrorResponse } from "../types/error";
 import type { ZodIssue } from "zod";
+
+/**
+ * Type for zValidator hook result parameter
+ * Using a local type since Zod v3/v4 have incompatible SafeParseReturnType definitions
+ */
+type ValidationResult = {
+  success: boolean;
+  error?: {
+    issues?: ZodIssue[];
+  };
+  data?: unknown;
+};
 
 /**
  * Custom error handler for @hono/zod-validator to match our API error format
@@ -12,7 +25,7 @@ import type { ZodIssue } from "zod";
  * @param c - Hono context
  * @returns JSON error response if validation failed
  */
-export const validatorErrorHandler = (result: any, c: any) => {
+export const validatorErrorHandler = (result: ValidationResult, c: Context) => {
   if (!result.success && result.error) {
     // Format Zod errors into our custom format: { field: [errors] }
     const fieldErrors: Record<string, string[]> = {};

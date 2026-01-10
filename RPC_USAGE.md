@@ -134,7 +134,7 @@ const fetchEvents = async () => {
 
   if (res.ok) {
     const data = await res.json();
-    // data is typed: { events: Event[], count: number }
+    // data is typed: { events: Event[], count: number, total: number, limit: number, offset: number }
     return data;
   }
 };

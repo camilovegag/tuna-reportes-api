@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
-import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import {
@@ -105,6 +104,7 @@ export async function getAttendanceController(c: Context) {
 
 export async function createAttendanceController(c: Context) {
   try {
+    // zValidator already validated, but we parse to FILTER unwanted fields
     const body = await c.req.json();
     const data = attendanceInsertSchema.parse(body);
     const user = c.get("user") as AuthUserPayload;
@@ -170,7 +170,7 @@ export async function createAttendanceController(c: Context) {
 export async function updateAttendanceController(c: Context) {
   const id = c.req.param("id");
   const idResult = attendanceSelectSchema.shape.id.safeParse(id);
-  // zValidator already validated, but we parse again to filter unwanted fields
+  // zValidator already validated, but we parse to FILTER unwanted fields
   const body = await c.req.json();
   const data = attendanceUpdateSchema.parse(body);
 

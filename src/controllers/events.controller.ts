@@ -58,7 +58,10 @@ export async function getEventsController(c: Context) {
     const limit = limitParam
       ? Math.min(parseInt(limitParam, 10) || 50, 100)
       : 50;
-    const offset = offsetParam ? parseInt(offsetParam, 10) || 0 : 0;
+    let offset = offsetParam ? parseInt(offsetParam, 10) : 0;
+    if (Number.isNaN(offset) || offset < 0) {
+      offset = 0;
+    }
 
     // Build and execute query
     let query = db.select().from(dbSchema.events);
@@ -138,8 +141,10 @@ export async function getEventController(c: Context) {
 }
 
 export async function createEventController(c: Context) {
+  // zValidator already validated, but we parse to FILTER unwanted fields
+  // (id, createdAt, etc.) that client may try to inject
   const body = await c.req.json();
-  const result = eventInsertSchema.parse(body); // Filter unwanted fields
+  const data = eventInsertSchema.parse(body);
   const user = c.get("user") as AuthUserPayload;
 
   try {
@@ -149,8 +154,8 @@ export async function createEventController(c: Context) {
       .from(dbSchema.events)
       .where(
         and(
-          eq(dbSchema.events.name, result.name),
-          eq(dbSchema.events.date, result.date),
+          eq(dbSchema.events.name, data.name),
+          eq(dbSchema.events.date, data.date),
         ),
       );
 
@@ -165,7 +170,7 @@ export async function createEventController(c: Context) {
     }
 
     const insertData = {
-      ...result,
+      ...data,
       createdBy: user.userId,
     };
 
@@ -204,9 +209,9 @@ export async function createEventController(c: Context) {
 export async function updateEventController(c: Context) {
   const id = c.req.param("id");
   const idResult = eventSelectSchema.shape.id.safeParse(id);
-  // zValidator already validated, but we parse again to filter unwanted fields
+  // zValidator already validated, but we parse to FILTER unwanted fields
   const body = await c.req.json();
-  const result = eventUpdateSchema.parse(body);
+  const data = eventUpdateSchema.parse(body);
 
   if (!idResult.success) {
     const errorResponse: ErrorResponse = {
@@ -218,7 +223,7 @@ export async function updateEventController(c: Context) {
     return c.json(errorResponse, 400);
   }
 
-  if (Object.keys(result).length === 0) {
+  if (Object.keys(data).length === 0) {
     return c.json(
       {
         error: {
@@ -234,7 +239,7 @@ export async function updateEventController(c: Context) {
 
   try {
     const updateData = {
-      ...result,
+      ...data,
       updatedAt: new Date().toISOString(),
       updatedBy: user.userId,
     };
