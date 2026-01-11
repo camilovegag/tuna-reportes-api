@@ -1,21 +1,28 @@
-import type { Context } from "hono";
-import { db, dbSchema } from "../db";
-import type {
-  MemberDeleteResponse,
-  MemberPatchResponse,
-  MemberPostResponse,
-  MembersGetResponse,
-} from "../types/member";
-import type { ErrorResponse } from "../types/error";
-import { ERROR_CODES } from "../constants/error-codes";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
+import { ERROR_CODES } from "../constants/error-codes";
+import { db, dbSchema } from "../db";
 import {
   memberInsertSchema,
   memberUpdateSchema,
 } from "../schemas/members.schema";
-import { z } from "zod/v4";
+import type { Member } from "../types/member";
+import type { ServiceResult } from "../types/service";
 
-export async function getMembersForRegistrationController(c: Context) {
+export type MemberBasic = {
+  id: string;
+  nickname: string;
+  fullName: string;
+};
+
+export type MembersGetResponse = {
+  members: Member[];
+  count: number;
+};
+
+export async function getMembersForRegistration(): Promise<
+  ServiceResult<MemberBasic[]>
+> {
   try {
     const members = await db
       .select({
@@ -26,69 +33,88 @@ export async function getMembersForRegistrationController(c: Context) {
       .from(dbSchema.members)
       .where(eq(dbSchema.members.isActive, true));
 
-    return c.json(members, 200);
+    return { success: true, data: members };
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function getMembersController(c: Context) {
+export async function getMembers(): Promise<ServiceResult<MembersGetResponse>> {
   try {
     const members = await db
       .select()
       .from(dbSchema.members)
       .where(eq(dbSchema.members.isActive, true));
-    const response: MembersGetResponse = {
-      members,
-      count: members.length,
+
+    return {
+      success: true,
+      data: {
+        members,
+        count: members.length,
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function getMemberController(c: Context) {
-  const id = c.req.param("id");
+export async function getMemberById(
+  id: string,
+): Promise<ServiceResult<Member>> {
+  try {
+    const [member] = await db
+      .select()
+      .from(dbSchema.members)
+      .where(eq(dbSchema.members.id, id));
 
-  const [member] = await db
-    .select()
-    .from(dbSchema.members)
-    .where(eq(dbSchema.members.id, id));
+    if (!member) {
+      return {
+        success: false,
+        error: {
+          message: "Member not found",
+          code: ERROR_CODES.NOT_FOUND,
+        },
+        status: 404,
+      };
+    }
 
-  if (!member) {
-    const errorResponse: ErrorResponse = {
+    return { success: true, data: member };
+  } catch (error) {
+    return {
+      success: false,
       error: {
-        message: "Member not found",
-        code: ERROR_CODES.NOT_FOUND,
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+        code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 404);
   }
-  return c.json(member, 200);
 }
 
-export async function postMemberController(c: Context) {
-  const body = await c.req.json();
-  const result = memberInsertSchema.safeParse(body);
+export async function createMember(
+  data: unknown,
+): Promise<ServiceResult<{ id: string; message: string }>> {
+  const result = memberInsertSchema.safeParse(data);
 
   if (!result.success) {
     const tree = z.treeifyError(result.error);
-
     const flatErrors = Object.fromEntries(
       Object.entries(tree.properties ?? {}).map(([key, value]) => [
         key,
@@ -96,14 +122,15 @@ export async function postMemberController(c: Context) {
       ]),
     );
 
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message: "Validation failed",
         details: flatErrors,
         code: ERROR_CODES.VALIDATION,
       },
+      status: 400,
     };
-    return c.json(errorResponse, 400);
   }
 
   try {
@@ -113,36 +140,41 @@ export async function postMemberController(c: Context) {
       .returning({ id: dbSchema.members.id });
 
     if (!inserted || !inserted.id) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Failed to create member",
           code: ERROR_CODES.INTERNAL,
         },
+        status: 500,
       };
-      return c.json(errorResponse, 500);
     }
 
-    const response: MemberPostResponse = {
-      id: inserted.id,
-      message: "Member created",
+    return {
+      success: true,
+      data: {
+        id: inserted.id,
+        message: "Member created",
+      },
     };
-    return c.json(response, 201);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function patchMemberController(c: Context) {
-  const id = c.req.param("id");
-  const body = await c.req.json();
-  const result = memberUpdateSchema.safeParse(body);
+export async function updateMember(
+  id: string,
+  data: unknown,
+): Promise<ServiceResult<{ id: string; message: string }>> {
+  const result = memberUpdateSchema.safeParse(data);
 
   if (!result.success) {
     const tree = z.treeifyError(result.error);
@@ -152,14 +184,16 @@ export async function patchMemberController(c: Context) {
         value.errors,
       ]),
     );
-    const errorResponse: ErrorResponse = {
+
+    return {
+      success: false,
       error: {
         message: "Validation failed",
         details: flatErrors,
         code: ERROR_CODES.VALIDATION,
       },
+      status: 400,
     };
-    return c.json(errorResponse, 400);
   }
 
   try {
@@ -170,34 +204,39 @@ export async function patchMemberController(c: Context) {
       .returning();
 
     if (!updated) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Member not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
-    const response: MemberPatchResponse = {
-      id: updated.id,
-      message: "Member updated",
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        message: "Member updated",
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
-export async function deleteMemberController(c: Context) {
-  const id = c.req.param("id");
 
+export async function deactivateMember(
+  id: string,
+): Promise<ServiceResult<{ id: string; message: string }>> {
   try {
     const [updated] = await db
       .update(dbSchema.members)
@@ -206,28 +245,32 @@ export async function deleteMemberController(c: Context) {
       .returning();
 
     if (!updated) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Member not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
-    const response: MemberDeleteResponse = {
-      id: updated.id,
-      message: "Member deactivated",
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        message: "Member deactivated",
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }

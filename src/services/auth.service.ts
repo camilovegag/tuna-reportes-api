@@ -1,19 +1,27 @@
 import { eq } from "drizzle-orm";
-import type { Context } from "hono";
 import { sign } from "hono/jwt";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
-import type { RegisterInput, LoginInput } from "../schemas/auth.schema";
-import type { ErrorResponse } from "../types/error";
 import type {
   AuthLoginPostResponse,
   AuthRegisterPostResponse,
 } from "../types/auth";
+import type { ServiceResult } from "../types/service";
 
-export async function registerHandler(c: Context) {
-  // Data already validated by zValidator in router, just get with type
-  const data = (await c.req.json()) as RegisterInput;
+export type RegisterInput = {
+  email: string;
+  password: string;
+  vinculationCode: string;
+};
 
+export type LoginInput = {
+  email: string;
+  password: string;
+};
+
+export async function registerUser(
+  data: RegisterInput,
+): Promise<ServiceResult<AuthRegisterPostResponse>> {
   try {
     // Check if member exists with the vinculation code
     const [member] = await db
@@ -22,13 +30,14 @@ export async function registerHandler(c: Context) {
       .where(eq(dbSchema.members.vinculationCode, data.vinculationCode));
 
     if (!member) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Vinculation code does not exist",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
     // Check if member is already linked to a user
@@ -38,13 +47,14 @@ export async function registerHandler(c: Context) {
       .where(eq(dbSchema.users.memberId, member.id));
 
     if (existingMemberUser) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Member is already linked to a user",
           code: ERROR_CODES.CONFLICT,
         },
+        status: 409,
       };
-      return c.json(errorResponse, 409);
     }
 
     // Check if email is already registered
@@ -54,13 +64,14 @@ export async function registerHandler(c: Context) {
       .where(eq(dbSchema.users.email, data.email));
 
     if (existingUser) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Email is already registered",
           code: ERROR_CODES.CONFLICT,
         },
+        status: 409,
       };
-      return c.json(errorResponse, 409);
     }
 
     // Hash password
@@ -78,36 +89,39 @@ export async function registerHandler(c: Context) {
       .returning({ id: dbSchema.users.id });
 
     if (!user) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Failed to create user",
           code: ERROR_CODES.INTERNAL,
         },
+        status: 500,
       };
-      return c.json(errorResponse, 500);
     }
 
-    const response: AuthRegisterPostResponse = {
-      id: user.id,
-      message: "User created",
+    return {
+      success: true,
+      data: {
+        id: user.id,
+        message: "User created",
+      },
     };
-    return c.json(response, 201);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function loginHandler(c: Context) {
-  // Data already validated by zValidator in router, just get with type
-  const data = (await c.req.json()) as LoginInput;
-
+export async function loginUser(
+  data: LoginInput,
+): Promise<ServiceResult<AuthLoginPostResponse>> {
   try {
     // Find user by email
     const [user] = await db
@@ -116,13 +130,14 @@ export async function loginHandler(c: Context) {
       .where(eq(dbSchema.users.email, data.email));
 
     if (!user || !user.passwordHash) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Invalid credentials",
           code: ERROR_CODES.UNAUTHORIZED,
         },
+        status: 401,
       };
-      return c.json(errorResponse, 401);
     }
 
     // Verify password
@@ -132,13 +147,14 @@ export async function loginHandler(c: Context) {
     );
 
     if (!isValidPassword) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Invalid credentials",
           code: ERROR_CODES.UNAUTHORIZED,
         },
+        status: 401,
       };
-      return c.json(errorResponse, 401);
     }
 
     // Generate JWT token
@@ -158,24 +174,26 @@ export async function loginHandler(c: Context) {
       .set({ lastLoginAt: new Date().toISOString() })
       .where(eq(dbSchema.users.id, user.id));
 
-    const response: AuthLoginPostResponse = {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
+    return {
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        },
       },
     };
-
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }

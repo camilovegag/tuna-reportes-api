@@ -1,20 +1,29 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { loginSchema, registerSchema } from "../schemas/auth.schema";
-import { loginHandler, registerHandler } from "../controllers/auth.controller";
-import { validatorErrorHandler } from "../utils/validator";
+import { jsonValidator } from "../middlewares/validation.middleware";
+import { registerUser, loginUser } from "../services/auth.service";
+import { registerSchema, loginSchema } from "../schemas/auth.schema";
 
 const authRouter = new Hono()
-  .post(
-    "/register",
-    zValidator("json", registerSchema, validatorErrorHandler),
-    registerHandler,
-  )
-  .post(
-    "/login",
-    zValidator("json", loginSchema, validatorErrorHandler),
-    loginHandler,
-  );
+  .post("/register", jsonValidator(registerSchema), async (c) => {
+    const body = c.req.valid("json");
+    const result = await registerUser(body);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 201);
+  })
+  .post("/login", jsonValidator(loginSchema), async (c) => {
+    const body = c.req.valid("json");
+    const result = await loginUser(body);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 200);
+  });
 
 export default authRouter;
 export type AuthRouterType = typeof authRouter;

@@ -1,27 +1,62 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
+import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { ROLES } from "../types/roles";
 import {
-  getMeController,
-  getUserController,
-  getUsersController,
-  updateUserController,
-} from "../controllers/users.controller";
+  getCurrentUser,
+  getUsers,
+  getUserById,
+  updateUser,
+} from "../services/users.service";
 import { userUpdateSchema } from "../schemas/users.schema";
-import { validatorErrorHandler } from "../utils/validator";
 
 const usersRouter = new Hono()
-  .get("/me", authMiddleware, getMeController)
-  .get("/", authMiddleware, requireRole([ROLES.ADMIN]), getUsersController)
-  .get("/:id", authMiddleware, requireRole([ROLES.ADMIN]), getUserController)
+  .get("/me", authMiddleware, async (c) => {
+    const user = c.get("user");
+    const result = await getCurrentUser(user.userId);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 200);
+  })
+  .get("/", authMiddleware, requireRole([ROLES.ADMIN]), async (c) => {
+    const result = await getUsers();
+
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 200);
+  })
+  .get("/:id", authMiddleware, requireRole([ROLES.ADMIN]), async (c) => {
+    const id = c.req.param("id");
+    const result = await getUserById(id);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 200);
+  })
   .patch(
     "/:id",
     authMiddleware,
     requireRole([ROLES.ADMIN]),
-    zValidator("json", userUpdateSchema, validatorErrorHandler),
-    updateUserController,
+    jsonValidator(userUpdateSchema),
+    async (c) => {
+      const id = c.req.param("id");
+      const body = c.req.valid("json");
+      const result = await updateUser(id, body);
+
+      if (!result.success) {
+        return c.json({ error: result.error }, result.status);
+      }
+
+      return c.json(result.data, 200);
+    },
   );
 
 export default usersRouter;

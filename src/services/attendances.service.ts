@@ -1,5 +1,4 @@
 import { and, eq } from "drizzle-orm";
-import type { Context } from "hono";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import {
@@ -7,132 +6,157 @@ import {
   attendanceSelectSchema,
   attendanceUpdateSchema,
 } from "../schemas/attendances.schema";
-import type { AuthUserPayload } from "../types/auth";
 import type {
+  Attendance,
   AttendanceDeleteResponse,
   AttendancePostResponse,
   AttendancesGetResponse,
   AttendanceUpdateResponse,
 } from "../types/attendance";
-import type { ErrorResponse } from "../types/error";
+import type { ServiceResult } from "../types/service";
 
-export async function getAttendancesController(c: Context) {
+export type AttendanceFilters = {
+  eventId?: string;
+  memberId?: string;
+};
+
+export async function getAttendances(
+  filters: AttendanceFilters,
+): Promise<ServiceResult<AttendancesGetResponse>> {
   try {
-    const eventId = c.req.query("eventId");
-    const memberId = c.req.query("memberId");
-
     let query = db.select().from(dbSchema.attendances);
 
     // Apply filters
-    if (eventId && memberId) {
+    if (filters.eventId && filters.memberId) {
       query = query.where(
         and(
-          eq(dbSchema.attendances.eventId, eventId),
-          eq(dbSchema.attendances.memberId, memberId),
+          eq(dbSchema.attendances.eventId, filters.eventId),
+          eq(dbSchema.attendances.memberId, filters.memberId),
         ),
       ) as typeof query;
-    } else if (eventId) {
+    } else if (filters.eventId) {
       query = query.where(
-        eq(dbSchema.attendances.eventId, eventId),
+        eq(dbSchema.attendances.eventId, filters.eventId),
       ) as typeof query;
-    } else if (memberId) {
+    } else if (filters.memberId) {
       query = query.where(
-        eq(dbSchema.attendances.memberId, memberId),
+        eq(dbSchema.attendances.memberId, filters.memberId),
       ) as typeof query;
     }
 
     const attendances = await query;
-    const response: AttendancesGetResponse = {
-      attendances,
-      count: attendances.length,
+
+    return {
+      success: true,
+      data: {
+        attendances,
+        count: attendances.length,
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function getAttendanceController(c: Context) {
+export async function getAttendanceById(
+  id: string,
+): Promise<ServiceResult<Attendance>> {
+  const idResult = attendanceSelectSchema.shape.id.safeParse(id);
+
+  if (!idResult.success) {
+    return {
+      success: false,
+      error: {
+        message: "Invalid attendance id format",
+        code: ERROR_CODES.VALIDATION,
+      },
+      status: 400,
+    };
+  }
+
   try {
-    const id = c.req.param("id");
-    const idResult = attendanceSelectSchema.shape.id.safeParse(id);
-
-    if (!idResult.success) {
-      const errorResponse: ErrorResponse = {
-        error: {
-          message: "Invalid attendance id format",
-          code: ERROR_CODES.VALIDATION,
-        },
-      };
-      return c.json(errorResponse, 400);
-    }
-
-    const [attendance] = await db
+    const result = await db
       .select()
       .from(dbSchema.attendances)
       .where(eq(dbSchema.attendances.id, idResult.data));
+    const attendance = result[0];
 
     if (!attendance) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Attendance not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
-    return c.json(attendance, 200);
+    return { success: true, data: attendance };
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function createAttendanceController(c: Context) {
-  try {
-    // zValidator already validated, but we parse to FILTER unwanted fields
-    const body = await c.req.json();
-    const data = attendanceInsertSchema.parse(body);
-    const user = c.get("user") as AuthUserPayload;
+export async function createAttendance(
+  data: unknown,
+  userId: string,
+): Promise<ServiceResult<AttendancePostResponse>> {
+  const parsed = attendanceInsertSchema.safeParse(data);
 
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: {
+        message: "Validation failed",
+        code: ERROR_CODES.VALIDATION,
+      },
+      status: 400,
+    };
+  }
+
+  try {
     // Check if attendance already exists for this event + member
     const [existing] = await db
       .select()
       .from(dbSchema.attendances)
       .where(
         and(
-          eq(dbSchema.attendances.eventId, data.eventId),
-          eq(dbSchema.attendances.memberId, data.memberId),
+          eq(dbSchema.attendances.eventId, parsed.data.eventId),
+          eq(dbSchema.attendances.memberId, parsed.data.memberId),
         ),
       );
 
     if (existing) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Attendance already exists for this event and member",
           code: ERROR_CODES.VALIDATION,
         },
+        status: 400,
       };
-      return c.json(errorResponse, 400);
     }
 
     const insertData = {
-      ...data,
-      updatedBy: user.userId,
+      ...parsed.data,
+      updatedBy: userId,
     };
 
     const [inserted] = await db
@@ -141,56 +165,72 @@ export async function createAttendanceController(c: Context) {
       .returning({ id: dbSchema.attendances.id });
 
     if (!inserted || !inserted.id) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Failed to create attendance",
           code: ERROR_CODES.INTERNAL,
         },
+        status: 500,
       };
-      return c.json(errorResponse, 500);
     }
 
-    const response: AttendancePostResponse = {
-      id: inserted.id,
-      message: "Attendance created",
+    return {
+      success: true,
+      data: {
+        id: inserted.id,
+        message: "Attendance created",
+      },
     };
-    return c.json(response, 201);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function updateAttendanceController(c: Context) {
-  const id = c.req.param("id");
+export async function updateAttendance(
+  id: string,
+  data: unknown,
+  userId: string,
+): Promise<ServiceResult<AttendanceUpdateResponse>> {
   const idResult = attendanceSelectSchema.shape.id.safeParse(id);
-  // zValidator already validated, but we parse to FILTER unwanted fields
-  const body = await c.req.json();
-  const data = attendanceUpdateSchema.parse(body);
 
   if (!idResult.success) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message: "Invalid attendance id format",
         code: ERROR_CODES.VALIDATION,
       },
+      status: 400,
     };
-    return c.json(errorResponse, 400);
   }
 
-  const user = c.get("user") as AuthUserPayload;
+  const parsed = attendanceUpdateSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: {
+        message: "Validation failed",
+        code: ERROR_CODES.VALIDATION,
+      },
+      status: 400,
+    };
+  }
 
   try {
     const updateData = {
-      ...data,
+      ...parsed.data,
       updatedAt: new Date().toISOString(),
-      updatedBy: user.userId,
+      updatedBy: userId,
     };
 
     const [updated] = await db
@@ -200,44 +240,50 @@ export async function updateAttendanceController(c: Context) {
       .returning();
 
     if (!updated) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Attendance not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
-    const response: AttendanceUpdateResponse = {
-      id: updated.id,
-      message: "Attendance updated",
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        message: "Attendance updated",
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function deleteAttendanceController(c: Context) {
-  const id = c.req.param("id");
+export async function deleteAttendance(
+  id: string,
+): Promise<ServiceResult<AttendanceDeleteResponse>> {
   const idResult = attendanceSelectSchema.shape.id.safeParse(id);
 
   if (!idResult.success) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message: "Invalid attendance id format",
         code: ERROR_CODES.VALIDATION,
       },
+      status: 400,
     };
-    return c.json(errorResponse, 400);
   }
 
   try {
@@ -247,28 +293,32 @@ export async function deleteAttendanceController(c: Context) {
       .returning();
 
     if (!deleted) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Attendance not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
-    const response: AttendanceDeleteResponse = {
-      id: deleted.id,
-      message: "Attendance deleted",
+    return {
+      success: true,
+      data: {
+        id: deleted.id,
+        message: "Attendance deleted",
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
