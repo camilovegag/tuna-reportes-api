@@ -17,12 +17,12 @@ Guidelines for AI agents working in this codebase.
 src/
 ├── app/           # Hono app config, CORS, route mounting
 ├── constants/     # App constants (error codes, roles)
-├── controllers/   # Request handlers with business logic
 ├── db/            # Drizzle config, schema, relations
-├── middlewares/   # Auth, role verification
-├── routers/       # Route definitions with validation
+├── middlewares/   # Auth, role verification, validation
+├── routers/       # Route definitions (thin layer)
 ├── schemas/       # Zod validation schemas (drizzle-zod)
 ├── scripts/       # DB seed/clean scripts
+├── services/      # Business logic layer
 ├── tests/         # Integration tests (*.router.test.ts)
 ├── types/         # TypeScript type definitions
 ├── utils/         # Utilities (validator, test helpers)
@@ -32,26 +32,18 @@ src/
 ## Build/Lint/Test Commands
 
 ```bash
-# Development
-bun run dev              # Start server with hot-reload
-
-# Testing
-bun test                 # Run all tests
-bun test --watch         # Watch mode
+bun run dev                                # Start server with hot-reload
+bun test                                   # Run all tests
+bun test --watch                           # Watch mode
 bun test src/tests/events.router.test.ts   # Run single test file
-bun test -t "test name"  # Run test by name pattern
-
-# Linting & Formatting
-bun run lint             # ESLint
-bun run format           # Prettier
-
-# Database
-bun run db:migrate       # Apply migrations
-bun run db:generate      # Generate new migrations
-bun run db:studio        # Open Drizzle Studio
-bun run db:seed          # Seed test data
-bun run db:clean         # Clean database
-bun run db:drop          # Drop migrations
+bun test -t "test name"                    # Run test by name pattern
+bun run lint                               # ESLint
+bun run format                             # Prettier
+bun run db:migrate                         # Apply migrations
+bun run db:generate                        # Generate new migrations
+bun run db:studio                          # Open Drizzle Studio
+bun run db:seed                            # Seed test data
+bun run db:clean                           # Clean database
 ```
 
 ## Code Style
@@ -69,68 +61,86 @@ bun run db:drop          # Drop migrations
 ```typescript
 // External packages first
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
 import { eq, and } from "drizzle-orm";
-import { z } from "zod/v4"; // Always import from zod/v4
+import { z } from "zod/v4"; // Always use zod/v4, NOT zod
 
-// Local imports (no .ts extension needed)
+// Local imports (no .ts extension)
 import { db, dbSchema } from "../db";
 import { ERROR_CODES } from "../constants/error-codes";
 
 // Type imports use 'import type'
-import type { Context } from "hono";
-import type { ErrorResponse } from "../types/error";
+import type { ServiceResult } from "../types/service";
 ```
 
 ### Naming Conventions
 
-| Category           | Convention             | Example                                  |
-| ------------------ | ---------------------- | ---------------------------------------- |
-| Files              | kebab-case             | `events.router.ts`, `auth.middleware.ts` |
-| Types              | PascalCase             | `Event`, `EventsGetResponse`             |
-| Functions          | camelCase              | `getEventsController`                    |
-| Constants          | SCREAMING_SNAKE        | `ERROR_CODES`, `ROLES`                   |
-| DB columns         | snake_case             | `created_at`, `member_id`                |
-| Routes             | kebab-case plurals     | `/events`, `/serenade-bookings`          |
-| Router exports     | camelCase + Router     | `eventsRouter`                           |
-| Controller exports | camelCase + Controller | `getEventsController`                    |
-| Schema exports     | camelCase + Schema     | `eventInsertSchema`                      |
+| Category        | Convention         | Example                                 |
+| --------------- | ------------------ | --------------------------------------- |
+| Files           | kebab-case         | `events.router.ts`, `events.service.ts` |
+| Types           | PascalCase         | `Event`, `EventsGetResponse`            |
+| Functions       | camelCase          | `getEvents`, `createEvent`              |
+| Constants       | SCREAMING_SNAKE    | `ERROR_CODES`, `ROLES`                  |
+| DB columns      | snake_case         | `created_at`, `member_id`               |
+| Routes          | kebab-case plurals | `/events`, `/serenade-bookings`         |
+| Router exports  | camelCase + Router | `eventsRouter`                          |
+| Service exports | camelCase          | `getEvents`, `createEvent`              |
+| Schema exports  | camelCase + Schema | `eventInsertSchema`                     |
 
-## Patterns
+## Architecture Patterns
 
-### Router Pattern
+### Router Pattern (thin layer - delegates to services)
 
 ```typescript
 const eventsRouter = new Hono()
-  .get("/:id", authMiddleware, getEventController)
+  .get("/", authMiddleware, async (c) => {
+    const result = await getEvents(filters);
+    if (!result.success) return c.json({ error: result.error }, result.status);
+    return c.json(result.data, 200);
+  })
   .post(
     "/",
     authMiddleware,
-    requireRole([ROLES.ADMIN, ROLES.EDITOR]),
-    zValidator("json", eventInsertSchema, validatorErrorHandler),
-    createEventController,
+    requireRole([ROLES.ADMIN]),
+    jsonValidator(eventInsertSchema),
+    async (c) => {
+      const body = c.req.valid("json");
+      const result = await createEvent(body, c.get("user").userId);
+      if (!result.success)
+        return c.json({ error: result.error }, result.status);
+      return c.json(result.data, 201);
+    },
   );
 
 export default eventsRouter;
 export type EventsRouterType = typeof eventsRouter;
 ```
 
-### Controller Pattern
+### Service Pattern (business logic with ServiceResult)
 
 ```typescript
-export async function getEventsController(c: Context) {
+export async function getEventById(id: string): Promise<ServiceResult<Event>> {
   try {
-    const events = await db.select().from(dbSchema.events);
-    return c.json({ events }, 200);
+    const [event] = await db
+      .select()
+      .from(dbSchema.events)
+      .where(eq(dbSchema.events.id, id));
+    if (!event)
+      return {
+        success: false,
+        error: { message: "Event not found", code: ERROR_CODES.NOT_FOUND },
+        status: 404,
+      };
+    return { success: true, data: event };
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 ```
@@ -138,7 +148,6 @@ export async function getEventsController(c: Context) {
 ### Schema Pattern (drizzle-zod)
 
 ```typescript
-// Omit system-managed fields for insert/update schemas
 export const eventInsertSchema = createInsertSchema(dbSchema.events)
   .omit({
     id: true,
@@ -147,9 +156,7 @@ export const eventInsertSchema = createInsertSchema(dbSchema.events)
     updatedAt: true,
     updatedBy: true,
   })
-  .extend({
-    name: z.string().min(3, "Name must be at least 3 characters"),
-  });
+  .extend({ name: z.string().min(3, "Name must be at least 3 characters") });
 
 export const eventUpdateSchema = createUpdateSchema(dbSchema.events)
   .omit({
@@ -164,20 +171,6 @@ export const eventUpdateSchema = createUpdateSchema(dbSchema.events)
 
 ## Error Handling
 
-### Standard ErrorResponse Type
-
-```typescript
-type ErrorResponse = {
-  error: {
-    message: string;
-    details?: Record<string, string[]>; // For validation errors
-    code: string;
-  };
-};
-```
-
-### Error Codes and HTTP Status Mapping
-
 | Status | Code             | Usage                       |
 | ------ | ---------------- | --------------------------- |
 | 400    | VALIDATION_ERROR | Bad request, invalid format |
@@ -187,29 +180,26 @@ type ErrorResponse = {
 | 409    | CONFLICT         | Duplicate resource          |
 | 500    | INTERNAL_ERROR   | Unexpected errors           |
 
-Always wrap controller logic in try/catch and return standardized error responses.
-
 ## Testing
 
-Tests are integration tests using Bun's test runner and `app.request()`.
+Integration tests using Bun's test runner and `app.request()`. Use helpers from `src/utils/test.ts`.
 
 ```typescript
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
+import { seedTestMember, createTestUser, loginTestUser } from "../utils/test";
 
 let token: string;
 
 beforeEach(async () => {
-  // Setup: seed data and authenticate
   const member = await seedTestMember();
   await createTestUser({}, member.vinculationCode);
-  const response = await loginTestUser("user@email.com", "password");
-  token = response.data.token;
+  token = (await loginTestUser("user@email.com", "password")).data.token;
 });
 
 afterEach(async () => {
-  // Cleanup: delete test data in correct order (FK constraints)
+  // Cleanup in FK-constraint order (children first)
   await db.delete(dbSchema.events);
   await db.delete(dbSchema.users);
   await db.delete(dbSchema.members);
@@ -232,9 +222,10 @@ describe("POST /events", () => {
 
 ## Important Notes
 
-- Always use `zod/v4` import path, not `zod`
+- Always use `zod/v4` import path, never `zod`
 - DB uses snake_case columns but TS uses camelCase properties
 - Routes are plural nouns in kebab-case
 - RBAC via `requireRole([ROLES.ADMIN, ROLES.EDITOR])` middleware
 - Test cleanup must respect foreign key constraints (delete child tables first)
 - Pre-commit hook runs lint-staged (ESLint + Prettier on staged files)
+- Services return `ServiceResult<T>` - routers handle success/error branching
