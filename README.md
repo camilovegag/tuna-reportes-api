@@ -137,12 +137,32 @@ GET /ping
 
 ### 📅 Eventos
 
-| Método | Endpoint      | Auth | Descripción               |
-| ------ | ------------- | ---- | ------------------------- |
-| GET    | `/events`     | ✅   | Listar todos los eventos  |
-| GET    | `/events/:id` | ✅   | Obtener evento específico |
-| POST   | `/events`     | ✅   | Crear nuevo evento        |
-| PATCH  | `/events/:id` | ✅   | Actualizar evento         |
+| Método | Endpoint      | Auth | Descripción                  |
+| ------ | ------------- | ---- | ---------------------------- |
+| GET    | `/events`     | ✅   | Listar eventos (con filtros) |
+| GET    | `/events/:id` | ✅   | Obtener evento específico    |
+| POST   | `/events`     | ✅   | Crear nuevo evento           |
+| PATCH  | `/events/:id` | ✅   | Actualizar evento            |
+
+**Query Parameters para `GET /events`:**
+
+| Param    | Tipo               | Ejemplo                    | Descripción                               |
+| -------- | ------------------ | -------------------------- | ----------------------------------------- |
+| `status` | string (comma-sep) | `confirmado,por_confirmar` | Filtrar por estado                        |
+| `type`   | string (comma-sep) | `serenata,ensayo`          | Filtrar por tipo                          |
+| `from`   | ISO date           | `2026-01-01`               | Eventos desde fecha                       |
+| `to`     | ISO date           | `2026-12-31`               | Eventos hasta fecha                       |
+| `limit`  | number             | `20`                       | Máximo resultados (default: 50, max: 100) |
+| `offset` | number             | `0`                        | Saltar N resultados                       |
+
+**Ejemplos:**
+
+```
+GET /events?status=confirmado,por_confirmar     # Dashboard activo
+GET /events?status=realizado,cancelado          # Archivo/Historial
+GET /events?type=serenata&from=2026-01-01       # Serenatas de 2026
+GET /events?limit=10&offset=20                  # Página 3 (10 por página)
+```
 
 ### ✅ Asistencias
 
@@ -222,6 +242,22 @@ Content-Type: application/json
 GET /members
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
+
+### ⏰ Expiración del Token
+
+Los tokens JWT tienen una duración de **7 días** (604,800 segundos). Después de este tiempo, el usuario deberá volver a autenticarse.
+
+```json
+{
+  "exp": 1234567890 // Unix timestamp de expiración
+}
+```
+
+**Razones de seguridad:**
+
+- Balance entre seguridad y experiencia de usuario
+- Apropiado para sistema de gestión organizacional
+- Usuarios pueden trabajar durante una semana sin re-autenticación
 
 ---
 

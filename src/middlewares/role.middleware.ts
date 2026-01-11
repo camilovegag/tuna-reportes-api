@@ -1,18 +1,16 @@
-import type { Context, Next } from "hono";
+import { createMiddleware } from "hono/factory";
 import { ERROR_CODES } from "../constants/error-codes";
-import type { AuthUserPayload } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
+import type { HonoContext } from "../types/hono-context";
 
 /**
  * Middleware to enforce role-based access control.
  * @param allowedRoles - Array of roles that are allowed to access the route
  * @returns Hono middleware function
  */
-export function requireRole(
-  allowedRoles: ReadonlyArray<AuthUserPayload["role"]>,
-) {
-  return async (c: Context, next: Next) => {
-    const user = c.get("user") as AuthUserPayload | undefined;
+export function requireRole(allowedRoles: ReadonlyArray<string>) {
+  return createMiddleware<HonoContext>(async (c, next) => {
+    const user = c.get("user");
 
     if (!user) {
       const errorResponse: ErrorResponse = {
@@ -35,5 +33,5 @@ export function requireRole(
     }
 
     await next();
-  };
+  });
 }

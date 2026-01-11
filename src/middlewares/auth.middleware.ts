@@ -1,12 +1,13 @@
 import { eq } from "drizzle-orm";
-import type { Context, Next } from "hono";
+import { createMiddleware } from "hono/factory";
 import { verify } from "hono/jwt";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import type { AuthUserPayload } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
+import type { HonoContext } from "../types/hono-context";
 
-export async function authMiddleware(c: Context, next: Next) {
+export const authMiddleware = createMiddleware<HonoContext>(async (c, next) => {
   const authHeader = c.req.header("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     const errorResponse: ErrorResponse = {
@@ -23,7 +24,13 @@ export async function authMiddleware(c: Context, next: Next) {
   try {
     const payload = (await verify(
       token,
-      process.env.JWT_SECRET!,
+      (() => {
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+          throw new Error("JWT_SECRET is required");
+        }
+        return jwtSecret;
+      })(),
     )) as AuthUserPayload;
 
     const [user] = await db
@@ -44,7 +51,7 @@ export async function authMiddleware(c: Context, next: Next) {
 
     c.set("user", payload);
     await next();
-  } catch (_error) {
+  } catch {
     const errorResponse: ErrorResponse = {
       error: {
         message: "Invalid or expired token",
@@ -53,4 +60,4 @@ export async function authMiddleware(c: Context, next: Next) {
     };
     return c.json(errorResponse, 401);
   }
-}
+});

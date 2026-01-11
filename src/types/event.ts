@@ -6,6 +6,9 @@ export type EventInsert = typeof dbSchema.events.$inferInsert;
 export type EventsGetResponse = {
   events: Event[];
   count: number;
+  total: number;
+  limit: number;
+  offset: number;
 };
 
 export type EventPostResponse = {

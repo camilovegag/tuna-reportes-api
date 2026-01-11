@@ -31,3 +31,6 @@ export const eventUpdateSchema = createUpdateSchema(dbSchema.events)
     updatedBy: true,
   })
   .strict();
+
+export type EventInsert = z.infer<typeof eventInsertSchema>;
+export type EventUpdate = z.infer<typeof eventUpdateSchema>;

@@ -1,53 +1,49 @@
 import { eq } from "drizzle-orm";
-import type { Context } from "hono";
 import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import { userSelectSchema, userUpdateSchema } from "../schemas/users.schema";
-import type { AuthUserPayload } from "../types/auth";
-import type { ErrorResponse } from "../types/error";
-import type {
-  UserPublic,
-  UsersGetResponse,
-  UserUpdateResponse,
-} from "../types/user";
+import type { ServiceResult } from "../types/service";
+import type { UserPublic, UsersGetResponse } from "../types/user";
 
-export async function getMeController(c: Context) {
+export async function getCurrentUser(
+  userId: string,
+): Promise<ServiceResult<UserPublic>> {
   try {
-    const user = c.get("user") as AuthUserPayload;
-
     const [dbUser] = await db
       .select()
       .from(dbSchema.users)
-      .where(eq(dbSchema.users.id, user.userId));
+      .where(eq(dbSchema.users.id, userId));
 
     if (!dbUser) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "User not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
     // Remove sensitive fields
     const { passwordHash, providerId, ...publicUser } = dbUser;
 
-    return c.json(publicUser, 200);
+    return { success: true, data: publicUser };
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function getUsersController(c: Context) {
+export async function getUsers(): Promise<ServiceResult<UsersGetResponse>> {
   try {
     const users = await db.select().from(dbSchema.users);
 
@@ -56,37 +52,41 @@ export async function getUsersController(c: Context) {
       ({ passwordHash, providerId, ...user }) => user,
     );
 
-    const response: UsersGetResponse = {
-      users: publicUsers,
-      count: publicUsers.length,
+    return {
+      success: true,
+      data: {
+        users: publicUsers,
+        count: publicUsers.length,
+      },
     };
-
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function getUserController(c: Context) {
+export async function getUserById(
+  id: string,
+): Promise<ServiceResult<UserPublic>> {
   try {
-    const id = c.req.param("id");
     const idResult = userSelectSchema.shape.id.safeParse(id);
 
     if (!idResult.success) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "Invalid user id format",
           code: ERROR_CODES.VALIDATION,
         },
+        status: 400,
       };
-      return c.json(errorResponse, 400);
     }
 
     const [user] = await db
@@ -95,46 +95,51 @@ export async function getUserController(c: Context) {
       .where(eq(dbSchema.users.id, idResult.data));
 
     if (!user) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "User not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
     // Remove sensitive fields
     const { passwordHash, providerId, ...publicUser } = user;
 
-    return c.json(publicUser, 200);
+    return { success: true, data: publicUser };
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }
 
-export async function updateUserController(c: Context) {
-  const id = c.req.param("id");
+export async function updateUser(
+  id: string,
+  data: unknown,
+): Promise<ServiceResult<{ id: string; message: string }>> {
   const idResult = userSelectSchema.shape.id.safeParse(id);
-  const body = await c.req.json();
-  const result = userUpdateSchema.safeParse(body);
 
   if (!idResult.success) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message: "Invalid user id format",
         code: ERROR_CODES.VALIDATION,
       },
+      status: 400,
     };
-    return c.json(errorResponse, 400);
   }
+
+  const result = userUpdateSchema.safeParse(data);
 
   if (!result.success) {
     const tree = z.treeifyError(result.error);
@@ -144,14 +149,16 @@ export async function updateUserController(c: Context) {
         value.errors,
       ]),
     );
-    const errorResponse: ErrorResponse = {
+
+    return {
+      success: false,
       error: {
         message: "Validation failed",
         details: flatErrors,
         code: ERROR_CODES.VALIDATION,
       },
+      status: 400,
     };
-    return c.json(errorResponse, 400);
   }
 
   try {
@@ -167,28 +174,32 @@ export async function updateUserController(c: Context) {
       .returning();
 
     if (!updated) {
-      const errorResponse: ErrorResponse = {
+      return {
+        success: false,
         error: {
           message: "User not found",
           code: ERROR_CODES.NOT_FOUND,
         },
+        status: 404,
       };
-      return c.json(errorResponse, 404);
     }
 
-    const response: UserUpdateResponse = {
-      id: updated.id,
-      message: "User updated",
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        message: "User updated",
+      },
     };
-    return c.json(response, 200);
   } catch (error) {
-    const errorResponse: ErrorResponse = {
+    return {
+      success: false,
       error: {
         message:
           error instanceof Error ? error.message : "Internal server error",
         code: ERROR_CODES.INTERNAL,
       },
+      status: 500,
     };
-    return c.json(errorResponse, 500);
   }
 }

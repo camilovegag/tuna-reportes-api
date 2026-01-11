@@ -1,41 +1,83 @@
 import { Hono } from "hono";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireRole } from "../middlewares/role.middleware";
+import { jsonValidator } from "../middlewares/validation.middleware";
+import {
+  serenadeBookingInsertSchema,
+  serenadeBookingUpdateSchema,
+} from "../schemas/serenade-bookings.schema";
 import {
   createSerenadeBooking,
   deleteSerenadeBooking,
   getSerenadeBookingById,
   getSerenadeBookings,
   updateSerenadeBooking,
-} from "../controllers/serenade-bookings.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { requireRole } from "../middlewares/role.middleware";
+} from "../services/serenade-bookings.service";
 import { ROLES } from "../types/roles";
 
-const serenadeBookingsRouter = new Hono();
+const serenadeBookingsRouter = new Hono()
+  .get("/", authMiddleware, async (c) => {
+    const result = await getSerenadeBookings();
 
-// Read: all authenticated users
-serenadeBookingsRouter.get("/", authMiddleware, getSerenadeBookings);
-serenadeBookingsRouter.get("/:id", authMiddleware, getSerenadeBookingById);
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
 
-// Create/Update: admin and editor
-serenadeBookingsRouter.post(
-  "/",
-  authMiddleware,
-  requireRole([ROLES.ADMIN, ROLES.EDITOR]),
-  createSerenadeBooking,
-);
-serenadeBookingsRouter.patch(
-  "/:id",
-  authMiddleware,
-  requireRole([ROLES.ADMIN, ROLES.EDITOR]),
-  updateSerenadeBooking,
-);
+    return c.json(result.data, 200);
+  })
+  .get("/:id", authMiddleware, async (c) => {
+    const id = c.req.param("id");
+    const result = await getSerenadeBookingById(id);
 
-// Delete: admin only
-serenadeBookingsRouter.delete(
-  "/:id",
-  authMiddleware,
-  requireRole([ROLES.ADMIN]),
-  deleteSerenadeBooking,
-);
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 200);
+  })
+  .post(
+    "/",
+    authMiddleware,
+    requireRole([ROLES.ADMIN, ROLES.EDITOR]),
+    jsonValidator(serenadeBookingInsertSchema),
+    async (c) => {
+      const body = c.req.valid("json");
+      const result = await createSerenadeBooking(body);
+
+      if (!result.success) {
+        return c.json({ error: result.error }, result.status);
+      }
+
+      return c.json(result.data, 201);
+    },
+  )
+  .patch(
+    "/:id",
+    authMiddleware,
+    requireRole([ROLES.ADMIN, ROLES.EDITOR]),
+    jsonValidator(serenadeBookingUpdateSchema),
+    async (c) => {
+      const id = c.req.param("id");
+      const body = c.req.valid("json");
+      const result = await updateSerenadeBooking(id, body);
+
+      if (!result.success) {
+        return c.json({ error: result.error }, result.status);
+      }
+
+      return c.json(result.data, 200);
+    },
+  )
+  .delete("/:id", authMiddleware, requireRole([ROLES.ADMIN]), async (c) => {
+    const id = c.req.param("id");
+    const result = await deleteSerenadeBooking(id);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, result.status);
+    }
+
+    return c.json(result.data, 200);
+  });
 
 export default serenadeBookingsRouter;
+export type SerenadeBookingsRouterType = typeof serenadeBookingsRouter;
