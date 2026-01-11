@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "prepare": "husky",
-    "format": "prettier --write .",
-    "lint": "eslint .",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "check": "biome check --write .",
     "db:migrate": "npx drizzle-kit migrate",
     "db:drop": "npx drizzle-kit drop",
     "db:generate": "npx drizzle-kit generate",
@@ -28,21 +29,17 @@
     "typescript": "^5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.24.0",
+    "@biomejs/biome": "^2.3.10",
     "@faker-js/faker": "^10.1.0",
     "@types/bun": "latest",
     "drizzle-kit": "^0.31.1",
-    "eslint": "^9.24.0",
-    "eslint-config-prettier": "^10.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
-    "prettier": "3.5.3",
     "tsx": "^4.19.4"
   },
   "lint-staged": {
-    "**/*": [
-      "eslint --fix",
-      "prettier --write --ignore-unknown"
+    "*": [
+      "biome check --write --no-errors-on-unmatched"
     ]
   }
 }

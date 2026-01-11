@@ -1,15 +1,15 @@
 import { Hono } from "hono";
-import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
+import { jsonValidator } from "../middlewares/validation.middleware";
+import { userUpdateSchema } from "../schemas/users.schema";
 import {
   getCurrentUser,
-  getUsers,
   getUserById,
+  getUsers,
   updateUser,
 } from "../services/users.service";
-import { userUpdateSchema } from "../schemas/users.schema";
+import { ROLES } from "../types/roles";
 
 const usersRouter = new Hono()
   .get("/me", authMiddleware, async (c) => {

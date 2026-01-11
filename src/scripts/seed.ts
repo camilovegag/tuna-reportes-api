@@ -1,12 +1,12 @@
-import { db } from "../db";
 import { faker } from "@faker-js/faker";
+import { db } from "../db";
 import {
-  members,
-  users,
+  attendances,
   clients,
   events,
+  members,
   serenadeBookings,
-  attendances,
+  users,
 } from "../db/schema";
 
 async function seed() {

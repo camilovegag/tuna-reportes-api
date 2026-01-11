@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
-import type { HonoContext } from "../types/hono-context";
-import type { ErrorResponse } from "../types/error";
 import { ERROR_CODES } from "../constants/error-codes";
+import type { ErrorResponse } from "../types/error";
+import type { HonoContext } from "../types/hono-context";
 
 /**
  * Middleware to enforce role-based access control.

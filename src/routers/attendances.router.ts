@@ -1,19 +1,19 @@
 import { Hono } from "hono";
-import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
-import {
-  getAttendances,
-  getAttendanceById,
-  createAttendance,
-  updateAttendance,
-  deleteAttendance,
-} from "../services/attendances.service";
+import { jsonValidator } from "../middlewares/validation.middleware";
 import {
   attendanceInsertSchema,
   attendanceUpdateSchema,
 } from "../schemas/attendances.schema";
+import {
+  createAttendance,
+  deleteAttendance,
+  getAttendanceById,
+  getAttendances,
+  updateAttendance,
+} from "../services/attendances.service";
+import { ROLES } from "../types/roles";
 
 const attendancesRouter = new Hono()
   .get("/", authMiddleware, async (c) => {

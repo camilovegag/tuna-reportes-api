@@ -1,4 +1,4 @@
-import { dbSchema } from "../db";
+import type { dbSchema } from "../db";
 
 export type Attendance = typeof dbSchema.attendances.$inferSelect;
 export type AttendanceInsert = typeof dbSchema.attendances.$inferInsert;

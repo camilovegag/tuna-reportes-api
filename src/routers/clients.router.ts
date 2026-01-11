@@ -1,19 +1,19 @@
 import { Hono } from "hono";
-import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
-import {
-  getClients,
-  getClientById,
-  createClient,
-  updateClient,
-  deleteClient,
-} from "../services/clients.service";
+import { jsonValidator } from "../middlewares/validation.middleware";
 import {
   clientInsertSchema,
   clientUpdateSchema,
 } from "../schemas/clients.schema";
+import {
+  createClient,
+  deleteClient,
+  getClientById,
+  getClients,
+  updateClient,
+} from "../services/clients.service";
+import { ROLES } from "../types/roles";
 
 const clientsRouter = new Hono()
   .get("/", authMiddleware, async (c) => {

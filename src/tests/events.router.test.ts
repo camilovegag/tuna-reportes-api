@@ -10,10 +10,10 @@ import type {
 } from "../types/event";
 import {
   createTestEvent,
-  seedTestMember,
   createTestUser,
   defaultEventData,
   loginTestUser,
+  seedTestMember,
 } from "../utils/test";
 
 let token: string;
@@ -26,7 +26,7 @@ beforeEach(async () => {
     token = response.data.token;
   } else {
     throw new Error(
-      "Failed to login test user: " + JSON.stringify(response.data),
+      `Failed to login test user: ${JSON.stringify(response.data)}`,
     );
   }
 });

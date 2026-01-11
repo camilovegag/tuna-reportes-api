@@ -1,20 +1,20 @@
 import { Hono } from "hono";
-import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
-import {
-  getMembersForRegistration,
-  getMembers,
-  getMemberById,
-  createMember,
-  updateMember,
-  deactivateMember,
-} from "../services/members.service";
+import { jsonValidator } from "../middlewares/validation.middleware";
 import {
   memberInsertSchema,
   memberUpdateSchema,
 } from "../schemas/members.schema";
+import {
+  createMember,
+  deactivateMember,
+  getMemberById,
+  getMembers,
+  getMembersForRegistration,
+  updateMember,
+} from "../services/members.service";
+import { ROLES } from "../types/roles";
 
 const membersRouter = new Hono()
   .get("/registration", async (c) => {

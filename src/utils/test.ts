@@ -1,13 +1,13 @@
+import { eq } from "drizzle-orm";
 import app from "../app";
 import { db, dbSchema } from "../db";
-import { eq } from "drizzle-orm";
 import type {
   AuthLoginPostResponse,
   AuthRegisterPostResponse,
 } from "../types/auth";
-import type { MemberInsert, MemberPostResponse } from "../types/member";
-import type { EventPostResponse } from "../types/event";
 import type { ErrorResponse } from "../types/error";
+import type { EventPostResponse } from "../types/event";
+import type { MemberInsert, MemberPostResponse } from "../types/member";
 
 export async function seedTestMember() {
   const defaultMember: MemberInsert = {

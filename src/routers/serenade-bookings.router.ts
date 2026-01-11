@@ -1,19 +1,19 @@
 import { Hono } from "hono";
-import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
-import {
-  getSerenadeBookings,
-  getSerenadeBookingById,
-  createSerenadeBooking,
-  updateSerenadeBooking,
-  deleteSerenadeBooking,
-} from "../services/serenade-bookings.service";
+import { jsonValidator } from "../middlewares/validation.middleware";
 import {
   serenadeBookingInsertSchema,
   serenadeBookingUpdateSchema,
 } from "../schemas/serenade-bookings.schema";
+import {
+  createSerenadeBooking,
+  deleteSerenadeBooking,
+  getSerenadeBookingById,
+  getSerenadeBookings,
+  updateSerenadeBooking,
+} from "../services/serenade-bookings.service";
+import { ROLES } from "../types/roles";
 
 const serenadeBookingsRouter = new Hono()
   .get("/", authMiddleware, async (c) => {

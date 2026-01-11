@@ -1,14 +1,14 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
-import { serenadeBookings, clients, events } from "../db/schema";
+import { clients, events, serenadeBookings } from "../db/schema";
+import type { ErrorResponse } from "../types/error";
+import type { Member } from "../types/member";
 import type {
   SerenadeBooking,
   SerenadeBookingsGetResponse,
 } from "../types/serenade-booking";
 import { createTestUser, loginTestUser, seedTestMember } from "../utils/test";
-import type { Member } from "../types/member";
-import type { ErrorResponse } from "../types/error";
 
 describe("Serenade Bookings Router", () => {
   let token: string;

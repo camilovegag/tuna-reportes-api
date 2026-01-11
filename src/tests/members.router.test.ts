@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import app from "../app";
 import { db, dbSchema } from "../db";
 import type { AuthLoginPostResponse } from "../types/auth";
