@@ -5,6 +5,8 @@
   "module": "index.ts",
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "test": "bun test --env-file .env",
+    "test:watch": "bun test --watch --env-file .env",
     "prepare": "husky",
     "format": "biome format --write .",
     "lint": "biome lint .",
