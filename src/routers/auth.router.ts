@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { jsonValidator } from "../middlewares/validation.middleware";
-import { registerUser, loginUser } from "../services/auth.service";
-import { registerSchema, loginSchema } from "../schemas/auth.schema";
+import { loginSchema, registerSchema } from "../schemas/auth.schema";
+import { loginUser, registerUser } from "../services/auth.service";
 
 const authRouter = new Hono()
   .post("/register", jsonValidator(registerSchema), async (c) => {

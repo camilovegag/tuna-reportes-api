@@ -1,15 +1,15 @@
-import { eq, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod/v4";
+import { ERROR_CODES } from "../constants/error-codes";
 import { db } from "../db";
 import { clients } from "../db/schema";
 import {
+  clientIdSchema,
   clientInsertSchema,
   clientUpdateSchema,
-  clientIdSchema,
 } from "../schemas/clients.schema";
 import type { Client, ClientsGetResponse } from "../types/client";
 import type { ServiceResult } from "../types/service";
-import { ERROR_CODES } from "../constants/error-codes";
 
 export async function getClients(): Promise<ServiceResult<ClientsGetResponse>> {
   try {

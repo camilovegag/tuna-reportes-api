@@ -165,7 +165,18 @@ export async function loginUser(
       exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
     };
 
-    const secret = process.env.JWT_SECRET!;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return {
+        success: false,
+        error: {
+          message: "JWT_SECRET is required",
+          code: ERROR_CODES.INTERNAL,
+        },
+        status: 500,
+      };
+    }
+
     const token = await sign(payload, secret);
 
     // Update last login

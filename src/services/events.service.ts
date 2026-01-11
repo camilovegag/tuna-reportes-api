@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte, SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, type SQL } from "drizzle-orm";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import { eventStatus, eventType } from "../db/schema";

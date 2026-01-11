@@ -20,7 +20,8 @@ async function seed() {
       Array.from({ length: 10 }).map(() => ({
         fullName: faker.person.fullName(),
         nickname: faker.person.firstName(), // Simple nickname
-        birthDate: faker.date.birthdate().toISOString().split("T")[0]!,
+        birthDate:
+          faker.date.birthdate().toISOString().split("T")[0] ?? "1970-01-01",
         rank: faker.helpers.arrayElement(["aspirante", "tuno", "bulto"]),
         email: faker.internet.email(),
         phone: faker.phone.number(),

@@ -242,7 +242,11 @@ describe("POST /events", () => {
     const event = (await fetchRes.json()) as Event;
 
     // createdAt should be recent, not the tampered value
-    const createdDate = new Date(event.createdAt!);
+    expect(event.createdAt).toBeString();
+    if (!event.createdAt) {
+      throw new Error("Expected createdAt to be set");
+    }
+    const createdDate = new Date(event.createdAt);
     expect(createdDate.getFullYear()).toBe(new Date().getFullYear());
     expect(event.createdAt).not.toBe(tamperedEvent.createdAt);
   });
@@ -301,7 +305,11 @@ describe("GET /events", () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       data = (await response.json()) as EventsGetResponse;
-      event = data.events.at(0)!;
+      const firstEvent = data.events.at(0);
+      if (!firstEvent) {
+        throw new Error("Expected at least one event");
+      }
+      event = firstEvent;
     });
 
     it("should respond with a 200 OK", () => {

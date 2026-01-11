@@ -1,6 +1,6 @@
 import { validator } from "hono/validator";
+import type * as v4 from "zod/v4";
 import type { z } from "zod/v4";
-import * as v4 from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import type { ErrorResponse } from "../types/error";
 

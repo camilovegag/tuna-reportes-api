@@ -3,8 +3,8 @@ import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import { userSelectSchema, userUpdateSchema } from "../schemas/users.schema";
-import type { UserPublic, UsersGetResponse } from "../types/user";
 import type { ServiceResult } from "../types/service";
+import type { UserPublic, UsersGetResponse } from "../types/user";
 
 export async function getCurrentUser(
   userId: string,

@@ -1,15 +1,15 @@
 import { Hono } from "hono";
-import { jsonValidator } from "../middlewares/validation.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
+import { jsonValidator } from "../middlewares/validation.middleware";
+import { eventInsertSchema, eventUpdateSchema } from "../schemas/events.schema";
 import {
-  getEvents,
-  getEventById,
   createEvent,
+  getEventById,
+  getEvents,
   updateEvent,
 } from "../services/events.service";
-import { eventInsertSchema, eventUpdateSchema } from "../schemas/events.schema";
+import { ROLES } from "../types/roles";
 
 const eventsRouter = new Hono()
   .get("/", authMiddleware, async (c) => {

@@ -18,15 +18,14 @@
  * ```
  */
 
-// Individual router types
-export type { PingRouterType } from "../routers/ping.router";
-export type { AuthRouterType } from "../routers/auth.router";
-export type { EventsRouterType } from "../routers/events.router";
-export type { MembersRouterType } from "../routers/members.router";
-export type { AttendancesRouterType } from "../routers/attendances.router";
-export type { UsersRouterType } from "../routers/users.router";
-export type { ClientsRouterType } from "../routers/clients.router";
-export type { SerenadeBookingsRouterType } from "../routers/serenade-bookings.router";
-
 // Main app type - import this in your frontend
 export type { AppType } from "../app";
+export type { AttendancesRouterType } from "../routers/attendances.router";
+export type { AuthRouterType } from "../routers/auth.router";
+export type { ClientsRouterType } from "../routers/clients.router";
+export type { EventsRouterType } from "../routers/events.router";
+export type { MembersRouterType } from "../routers/members.router";
+// Individual router types
+export type { PingRouterType } from "../routers/ping.router";
+export type { SerenadeBookingsRouterType } from "../routers/serenade-bookings.router";
+export type { UsersRouterType } from "../routers/users.router";
