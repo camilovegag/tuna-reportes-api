@@ -1,16 +1,16 @@
-import { eq, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { z } from "zod/v4";
+import { ERROR_CODES } from "../constants/error-codes";
 import { db } from "../db";
 import { clients } from "../db/schema";
 import {
+  clientIdSchema,
   clientInsertSchema,
   clientUpdateSchema,
-  clientIdSchema,
 } from "../schemas/clients.schema";
+import type { ClientsGetResponse } from "../types/client";
 import type { ErrorResponse } from "../types/error";
-import type { Client, ClientsGetResponse } from "../types/client";
-import { ERROR_CODES } from "../constants/error-codes";
 
 export const getClients = async (c: Context): Promise<Response> => {
   try {

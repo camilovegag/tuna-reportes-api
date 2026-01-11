@@ -1,17 +1,16 @@
 import {
-  pgTable,
+  boolean,
+  date,
   foreignKey,
-  uuid,
+  integer,
+  pgEnum,
+  pgTable,
   text,
   timestamp,
   unique,
-  integer,
-  date,
+  uuid,
   varchar,
-  boolean,
-  pgEnum,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 export const attendanceStatus = pgEnum("attendance_status", [
   "asiste",

@@ -1,11 +1,11 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import app from "../app";
 import { db, dbSchema } from "../db";
 import { clients } from "../db/schema";
 import type { Client, ClientsGetResponse } from "../types/client";
-import { createTestUser, loginTestUser, seedTestMember } from "../utils/test";
-import type { Member } from "../types/member";
 import type { ErrorResponse } from "../types/error";
+import type { Member } from "../types/member";
+import { createTestUser, loginTestUser, seedTestMember } from "../utils/test";
 
 describe("Clients Router", () => {
   let token: string;

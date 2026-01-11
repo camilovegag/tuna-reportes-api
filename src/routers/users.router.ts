@@ -1,13 +1,13 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { requireRole } from "../middlewares/role.middleware";
-import { ROLES } from "../types/roles";
 import {
   getMeController,
   getUserController,
   getUsersController,
   updateUserController,
 } from "../controllers/users.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireRole } from "../middlewares/role.middleware";
+import { ROLES } from "../types/roles";
 
 const usersRouter = new Hono();
 

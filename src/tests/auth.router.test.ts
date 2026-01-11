@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { db, dbSchema } from "../db";
 import type {
   AuthLoginPostResponse,
@@ -25,7 +25,7 @@ beforeEach(async () => {
     token = response.data.token;
   } else {
     throw new Error(
-      "Failed to login test user: " + JSON.stringify(response.data),
+      `Failed to login test user: ${JSON.stringify(response.data)}`,
     );
   }
 });

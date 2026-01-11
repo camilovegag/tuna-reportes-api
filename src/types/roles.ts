@@ -5,9 +5,9 @@ export const USER_ROLES = dbSchema.userRole.enumValues; // ["admin", "editor", "
 
 // Explicitly map named roles without relying on enum ordering
 export const ROLES = {
-  ADMIN: USER_ROLES[USER_ROLES.indexOf("admin")],
-  EDITOR: USER_ROLES[USER_ROLES.indexOf("editor")],
-  VIEWER: USER_ROLES[USER_ROLES.indexOf("viewer")],
+  ADMIN: USER_ROLES[USER_ROLES.indexOf("admin")] as UserRole,
+  EDITOR: USER_ROLES[USER_ROLES.indexOf("editor")] as UserRole,
+  VIEWER: USER_ROLES[USER_ROLES.indexOf("viewer")] as UserRole,
 } as const;
 
 // Type inferred from the enum

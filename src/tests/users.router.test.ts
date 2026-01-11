@@ -53,11 +53,11 @@ describe("GET /users/me", () => {
 
   describe("when user is not authenticated", () => {
     let response: Response;
-    let data: ErrorResponse;
+    let _data: ErrorResponse;
 
     beforeEach(async () => {
       response = await app.request("/users/me");
-      data = (await response.json()) as ErrorResponse;
+      _data = (await response.json()) as ErrorResponse;
     });
 
     it("should respond with 401 Unauthorized", () => {

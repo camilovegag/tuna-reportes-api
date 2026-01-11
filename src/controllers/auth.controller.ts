@@ -5,9 +5,9 @@ import { z } from "zod/v4";
 import { ERROR_CODES } from "../constants/error-codes";
 import { db, dbSchema } from "../db";
 import {
+  type AuthProvider,
   loginSchema,
   registerSchema,
-  type AuthProvider,
 } from "../schemas/auth.schema";
 import type { AuthRegisterPostResponse } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
@@ -150,7 +150,7 @@ export async function postLoginController(c: Context) {
     .from(dbSchema.users)
     .where(eq(dbSchema.users.email, result.data.email));
 
-  if (user && user.passwordHash) {
+  if (user?.passwordHash) {
     const passwordMatch = await Bun.password.verify(
       result.data.password,
       user.passwordHash,

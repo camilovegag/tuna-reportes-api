@@ -8,9 +8,9 @@ import {
   eventSelectSchema,
   eventUpdateSchema,
 } from "../schemas/events.schema";
+import type { AuthUserPayload } from "../types/auth";
 import type { ErrorResponse } from "../types/error";
 import type { EventPostResponse, EventsGetResponse } from "../types/event";
-import type { AuthUserPayload } from "../types/auth";
 
 export async function getEventsController(c: Context) {
   try {
