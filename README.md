@@ -2,9 +2,10 @@
 
 API REST para la gestión integral de una tuna universitaria: miembros, eventos, asistencias y usuarios.
 
-[![Tests](https://img.shields.io/badge/tests-88%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-112%20passing-brightgreen)]()
 [![Bun](https://img.shields.io/badge/bun-v1.2.8-black)]()
 [![TypeScript](https://img.shields.io/badge/typescript-100%25-blue)]()
+[![Biome](https://img.shields.io/badge/biome-2.3-60a5fa)]()
 
 ---
 
@@ -14,10 +15,12 @@ API REST para la gestión integral de una tuna universitaria: miembros, eventos,
 - [Stack Tecnológico](#️-stack-tecnológico)
 - [Inicio Rápido](#-inicio-rápido)
 - [Endpoints](#-endpoints)
+- [RPC Client (Type-Safe)](#-rpc-client-type-safe)
 - [Flujo de Autenticación](#-flujo-de-autenticación)
 - [Base de Datos](#️-base-de-datos)
 - [Desarrollo](#-desarrollo)
 - [Testing](#-testing)
+- [Documentación Adicional](#-documentación-adicional)
 
 ---
 
@@ -25,12 +28,14 @@ API REST para la gestión integral de una tuna universitaria: miembros, eventos,
 
 - **Autenticación JWT** con soporte para Google OAuth (futuro)
 - **CRUD completo** de miembros, eventos, asistencias y usuarios
-- **Validación robusta** con Zod + Drizzle
-- **Type-safe** al 100% con TypeScript
-- **Tests comprehensivos** (88 tests pasando)
+- **Validación robusta** con Zod v4 + Drizzle
+- **Type-safe al 100%** con TypeScript strict mode
+- **Hono RPC** para integración type-safe con frontends
+- **Service Layer** con patrón `ServiceResult<T>` para manejo de errores
+- **Tests comprehensivos** (112+ tests pasando)
 - **Soft deletes** para miembros
 - **Audit trail** en asistencias y eventos
-- **Query filtering** en endpoints de listado
+- **Query filtering** con paginación en endpoints de listado
 
 ---
 
@@ -38,28 +43,35 @@ API REST para la gestión integral de una tuna universitaria: miembros, eventos,
 
 ### Core
 
-- **[Bun](https://bun.sh)** - Runtime JavaScript ultrarrápido
-- **[Hono](https://hono.dev)** - Framework web minimalista
-- **[TypeScript](https://www.typescriptlang.org/)** - Tipado estático
+| Tecnología                                          | Descripción                       |
+| --------------------------------------------------- | --------------------------------- |
+| **[Bun](https://bun.sh)** v1.2.8+                   | Runtime JavaScript ultrarrápido   |
+| **[Hono](https://hono.dev)** v4                     | Framework web minimalista con RPC |
+| **[TypeScript](https://www.typescriptlang.org/)** 5 | Tipado estático (strict mode)     |
 
 ### Base de Datos
 
-- **[PostgreSQL](https://www.postgresql.org/)** - Base de datos relacional
-- **[Drizzle ORM](https://orm.drizzle.team/)** - ORM type-safe
-- **[Drizzle Kit](https://orm.drizzle.team/kit-docs/overview)** - Migraciones y Studio
+| Tecnología                                                    | Descripción              |
+| ------------------------------------------------------------- | ------------------------ |
+| **[PostgreSQL](https://www.postgresql.org/)**                 | Base de datos relacional |
+| **[Drizzle ORM](https://orm.drizzle.team/)**                  | ORM type-safe            |
+| **[Drizzle Kit](https://orm.drizzle.team/kit-docs/overview)** | Migraciones y Studio     |
 
 ### Validación & Seguridad
 
-- **[Zod](https://zod.dev/)** - Validación de schemas
-- **[drizzle-zod](https://orm.drizzle.team/docs/zod)** - Integración Drizzle + Zod
-- **JWT** - Autenticación con tokens
+| Tecnología                                           | Descripción               |
+| ---------------------------------------------------- | ------------------------- |
+| **[Zod](https://zod.dev/)** v4                       | Validación de schemas     |
+| **[drizzle-zod](https://orm.drizzle.team/docs/zod)** | Integración Drizzle + Zod |
+| **JWT**                                              | Autenticación con tokens  |
 
 ### Desarrollo
 
-- **[ESLint](https://eslint.org/)** - Linting
-- **[Prettier](https://prettier.io/)** - Formateo de código
-- **[Husky](https://typicode.github.io/husky/)** - Git hooks
-- **[Bun Test](https://bun.sh/docs/cli/test)** - Testing
+| Tecnología                                     | Descripción                                                |
+| ---------------------------------------------- | ---------------------------------------------------------- |
+| **[Biome](https://biomejs.dev/)** v2.3         | Linting + Formateo unificado (reemplaza ESLint + Prettier) |
+| **[Husky](https://typicode.github.io/husky/)** | Git hooks                                                  |
+| **[Bun Test](https://bun.sh/docs/cli/test)**   | Testing nativo                                             |
 
 ---
 
@@ -155,15 +167,6 @@ GET /ping
 | `limit`  | number             | `20`                       | Máximo resultados (default: 50, max: 100) |
 | `offset` | number             | `0`                        | Saltar N resultados                       |
 
-**Ejemplos:**
-
-```
-GET /events?status=confirmado,por_confirmar     # Dashboard activo
-GET /events?status=realizado,cancelado          # Archivo/Historial
-GET /events?type=serenata&from=2026-01-01       # Serenatas de 2026
-GET /events?limit=10&offset=20                  # Página 3 (10 por página)
-```
-
 ### ✅ Asistencias
 
 | Método | Endpoint                    | Auth | Descripción                          |
@@ -184,6 +187,68 @@ GET /events?limit=10&offset=20                  # Página 3 (10 por página)
 | GET    | `/users`     | ✅   | Listar todos los usuarios  |
 | GET    | `/users/:id` | ✅   | Obtener usuario específico |
 | PATCH  | `/users/:id` | ✅   | Actualizar rol de usuario  |
+
+---
+
+## 🔗 RPC Client (Type-Safe)
+
+Este proyecto expone tipos para crear un cliente RPC completamente type-safe en tu frontend.
+
+### Instalación en Frontend
+
+```bash
+bun add hono
+```
+
+### Crear Cliente
+
+```typescript
+// src/lib/api-client.ts
+import { hc } from "hono/client";
+import type { AppType } from "../../tuna-reportes-api/src/types/rpc";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+export const createAuthenticatedClient = () => {
+  const token = localStorage.getItem("auth_token");
+  return hc<AppType>(API_URL, {
+    init: { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  });
+};
+```
+
+> **📦 Repositorios Separados**: Si tu frontend y backend no están en un monorepo, puedes instalar este proyecto como paquete desde GitHub. Ver [INSTALL_AS_PACKAGE.md](./INSTALL_AS_PACKAGE.md) para la guía completa.
+
+### Uso
+
+```typescript
+// Login con tipos completos
+const res = await publicApi.auth.login.$post({
+  json: { email, password },
+});
+const data = await res.json(); // { token: string, user: {...} }
+
+// Fetch events con autocomplete
+const api = createAuthenticatedClient();
+const res = await api.events.$get();
+const { events, count, total } = await res.json();
+
+// Crear evento con validación en tiempo de compilación
+await api.events.$post({
+  json: { name, date, location, type: "serenata" },
+});
+```
+
+### Beneficios
+
+| ✅  | Beneficio                                                               |
+| --- | ----------------------------------------------------------------------- |
+| 🎯  | **Full Type Safety**: Autocomplete para todas las rutas y payloads      |
+| 🔴  | **Compile-Time Errors**: Detecta errores de contrato antes del runtime  |
+| ⚡  | **No Code Generation**: Tipos inferidos directamente del backend        |
+| 🔄  | **Refactoring Support**: Renombra rutas/campos con feedback instantáneo |
+
+> 📄 Ver [RPC_USAGE.md](./RPC_USAGE.md) para documentación completa con ejemplos de React hooks.
 
 ---
 
@@ -245,19 +310,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 ### ⏰ Expiración del Token
 
-Los tokens JWT tienen una duración de **7 días** (604,800 segundos). Después de este tiempo, el usuario deberá volver a autenticarse.
-
-```json
-{
-  "exp": 1234567890 // Unix timestamp de expiración
-}
-```
-
-**Razones de seguridad:**
-
-- Balance entre seguridad y experiencia de usuario
-- Apropiado para sistema de gestión organizacional
-- Usuarios pueden trabajar durante una semana sin re-autenticación
+Los tokens JWT tienen una duración de **7 días**. Después de este tiempo, el usuario deberá volver a autenticarse.
 
 ---
 
@@ -295,18 +348,6 @@ bun run db:migrate
 bun run db:drop
 ```
 
-### Resetear Base de Datos
-
-```bash
-# Detener y borrar todo
-docker-compose down -v
-
-# Iniciar limpio
-docker-compose up -d
-sleep 3
-bun run db:migrate
-```
-
 ---
 
 ## 💻 Desarrollo
@@ -316,14 +357,17 @@ bun run db:migrate
 ```bash
 # Desarrollo
 bun run dev              # Servidor con hot-reload
-bun run format           # Formatear código con Prettier
-bun run lint             # Lint código con ESLint
+bun run format           # Formatear código con Biome
+bun run lint             # Lint código con Biome
+bun run check            # Lint + Format en un comando
 
 # Base de Datos
 bun run db:studio        # Abrir Drizzle Studio
 bun run db:generate      # Generar migraciones
 bun run db:migrate       # Aplicar migraciones
 bun run db:drop          # Eliminar migraciones
+bun run db:seed          # Seed de datos de prueba
+bun run db:clean         # Limpiar base de datos
 
 # Testing
 bun test                 # Ejecutar todos los tests
@@ -335,22 +379,36 @@ bun test --watch         # Tests en modo watch
 ```
 src/
 ├── app/                 # Configuración de Hono
-├── constants/           # Constantes (error codes)
-├── controllers/         # Lógica de negocio
+├── constants/           # Constantes (error codes, roles)
 ├── db/                  # Schema y configuración de DB
-├── middlewares/         # Middlewares (auth)
-├── routers/             # Definición de rutas
+├── middlewares/         # Middlewares (auth, validation)
+├── routers/             # Definición de rutas (thin layer)
 ├── schemas/             # Validación con Zod
-├── types/               # Tipos TypeScript
-├── utils/               # Utilidades
-└── tests/               # Tests
+├── scripts/             # Scripts de DB (seed, clean)
+├── services/            # Lógica de negocio (ServiceResult<T>)
+├── types/               # Tipos TypeScript + RPC types
+├── utils/               # Utilidades (test helpers)
+├── tests/               # Integration tests
+└── index.ts             # Entry point (Bun.serve)
 ```
+
+### Code Style (Biome)
+
+El proyecto usa **Biome** para linting y formateo unificado:
+
+| Configuración   | Valor         |
+| --------------- | ------------- |
+| Semicolons      | Required      |
+| Quotes          | Double quotes |
+| Trailing commas | All           |
+| Indent          | 2 spaces      |
+| Line width      | 80 characters |
 
 ### Git Hooks
 
-El proyecto usa Husky para ejecutar automáticamente:
+El proyecto usa Husky con lint-staged:
 
-- **Pre-commit**: ESLint + Prettier en archivos staged
+- **Pre-commit**: `biome check --write` en archivos staged
 
 ---
 
@@ -362,8 +420,11 @@ El proyecto usa Husky para ejecutar automáticamente:
 # Todos los tests
 bun test
 
-# Con coverage
-bun test --coverage
+# Archivo específico
+bun test src/tests/events.router.test.ts
+
+# Por nombre
+bun test -t "should create event"
 
 # Modo watch
 bun test --watch
@@ -372,20 +433,29 @@ bun test --watch
 ### Resultados Actuales
 
 ```
-✅ 88 tests passing
-⏭️  7 tests todo
+✅ 112+ tests passing
+⏭️  Tests todo pendientes
 ❌ 0 tests failing
 ⏱️  ~10s execution time
 ```
 
 ### Coverage por Módulo
 
-- **Attendances**: 12 tests ✅
-- **Users**: 12 tests ✅
-- **Members**: 18 tests ✅
-- **Events**: 42 tests ✅
-- **Auth**: 26 tests ✅
-- **Ping**: 2 tests ✅
+- **Auth**: tests de registro y login
+- **Members**: CRUD + soft delete
+- **Events**: CRUD + filtros de query
+- **Attendances**: CRUD + filtros
+- **Users**: perfil + gestión de roles
+
+---
+
+## 📚 Documentación Adicional
+
+| Documento                                        | Descripción                                                      |
+| ------------------------------------------------ | ---------------------------------------------------------------- |
+| [AGENTS.md](./AGENTS.md)                         | Guía para AI agents trabajando en el codebase                    |
+| [RPC_USAGE.md](./RPC_USAGE.md)                   | Guía completa de integración RPC con frontends                   |
+| [INSTALL_AS_PACKAGE.md](./INSTALL_AS_PACKAGE.md) | Cómo instalar el backend como paquete de tipos (repos separados) |
 
 ---
 
@@ -399,10 +469,11 @@ bun test --watch
 
 ### Convenciones de Código
 
-- **Formateo**: Prettier (2 espacios, sin semicolons)
-- **Linting**: ESLint con configuración estándar
+- **Formateo**: Biome (2 espacios, semicolons, double quotes)
+- **Linting**: Biome con reglas recomendadas
 - **Commits**: Mensajes descriptivos en inglés
 - **Tests**: Obligatorios para nuevas features
+- **Imports**: `zod/v4` siempre, nunca `zod`
 
 ---
 
