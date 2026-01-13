@@ -12,9 +12,16 @@
     }
   },
   "files": [
-    "src"
+    "src/index.ts",
+    "src/types",
+    "src/app",
+    "src/routers",
+    "src/schemas",
+    "src/constants",
+    "src/middlewares"
   ],
   "scripts": {
+    "postinstall": "node -e \"if (require('fs').existsSync('.git')) require('child_process').execSync('husky', {stdio: 'inherit'})\"",
     "dev": "bun --watch src/index.ts",
     "test": "bun test --env-file .env",
     "test:watch": "bun test --watch --env-file .env",

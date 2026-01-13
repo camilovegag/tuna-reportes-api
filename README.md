@@ -28,7 +28,7 @@ API REST para la gestión integral de una tuna universitaria: miembros, eventos,
 
 - **Autenticación JWT** con soporte para Google OAuth (futuro)
 - **CRUD completo** de miembros, eventos, asistencias y usuarios
-- **Validación robusta** con Zod v4 + Drizzle
+- **Validación robusta** con Zod v3 (API v4) + Drizzle
 - **Type-safe al 100%** con TypeScript strict mode
 - **Hono RPC** para integración type-safe con frontends
 - **Service Layer** con patrón `ServiceResult<T>` para manejo de errores
@@ -61,7 +61,7 @@ API REST para la gestión integral de una tuna universitaria: miembros, eventos,
 
 | Tecnología                                           | Descripción               |
 | ---------------------------------------------------- | ------------------------- |
-| **[Zod](https://zod.dev/)** v4                       | Validación de schemas     |
+| **[Zod](https://zod.dev/)** v3 (API v4)              | Validación de schemas     |
 | **[drizzle-zod](https://orm.drizzle.team/docs/zod)** | Integración Drizzle + Zod |
 | **JWT**                                              | Autenticación con tokens  |
 
@@ -205,7 +205,7 @@ bun add hono
 ```typescript
 // src/lib/api-client.ts
 import { hc } from "hono/client";
-import type { AppType } from "../../tuna-reportes-api/src/types/rpc";
+import type { AppType } from "tuna-reportes-api"; // Instalado como paquete
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -217,7 +217,9 @@ export const createAuthenticatedClient = () => {
 };
 ```
 
-> **📦 Repositorios Separados**: Si tu frontend y backend no están en un monorepo, puedes instalar este proyecto como paquete desde GitHub. Ver [INSTALL_AS_PACKAGE.md](./INSTALL_AS_PACKAGE.md) para la guía completa.
+> **📦 Repositorios Separados**: Si tu frontend y backend no están en un monorepo, instala este proyecto como paquete desde GitHub. Ver [INSTALL_AS_PACKAGE.md](./INSTALL_AS_PACKAGE.md) para la guía completa.
+>
+> **🔗 Monorepo**: Si usas un monorepo, cambia el import a: `import type { AppType } from "../../tuna-reportes-api/src/types/rpc"`
 
 ### Uso
 

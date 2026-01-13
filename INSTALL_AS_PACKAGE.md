@@ -24,17 +24,32 @@ El `package.json` ya está configurado para ser instalable:
 {
   "name": "tuna-reportes-api",
   "version": "1.0.0",
-  "private": false, // Permite instalación
-  "types": "src/types/rpc.ts", // Punto de entrada de tipos
+  "private": false,
+  "types": "src/types/rpc.ts",
   "exports": {
     ".": {
       "types": "./src/types/rpc.ts",
       "default": "./src/index.ts"
     }
   },
-  "files": ["src"] // Incluye src/ en el paquete
+  "files": [
+    "src/index.ts",
+    "src/types",
+    "src/app",
+    "src/routers",
+    "src/schemas",
+    "src/constants",
+    "src/middlewares"
+  ]
 }
 ```
+
+**Explicación de campos clave:**
+
+- `"private": false` - Permite instalación externa
+- `"types"` - Punto de entrada de tipos TypeScript
+- `"exports"` - Configuración moderna de exports
+- `"files"` - Archivos incluidos en el paquete (excluye tests y scripts)
 
 ### ¿Qué exporta?
 
@@ -50,11 +65,11 @@ El archivo `src/types/rpc.ts` exporta:
 ### Opción 1: Desde GitHub (Recomendado)
 
 ```bash
-# Repositorio público
-bun add github:camilovegag/tuna-reportes-api
+# Repositorio público (como dev dependency)
+bun add -d github:camilovegag/tuna-reportes-api
 
 # Repositorio privado (con SSH configurado)
-bun add git+ssh://git@github.com/camilovegag/tuna-reportes-api.git
+bun add -d git+ssh://git@github.com/camilovegag/tuna-reportes-api.git
 ```
 
 ### Opción 2: Desde Local (Para desarrollo)
@@ -90,7 +105,15 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 // Cliente público (sin auth)
 export const publicApi = hc<AppType>(API_URL);
 
-// Cliente autenticado
+/**
+ * Cliente autenticado
+ *
+ * ⚠️ NOTA DE SEGURIDAD: Este ejemplo usa localStorage para simplicidad.
+ * En producción, considera usar:
+ * - Cookies HTTP-only y Secure
+ * - sessionStorage (menos persistente)
+ * - Un state manager con refresh tokens
+ */
 export const createAuthenticatedClient = () => {
   const token = localStorage.getItem("auth_token");
   return hc<AppType>(API_URL, {
